@@ -22,6 +22,7 @@ class AI(BaseAI):
 
     def valid_move(self, piece, newFile, newRank):
         validPiecesToCapture = [ "p", "b", "r", "n", "q", "k" ]
+        myPieces = [ "P", "B", "R", "N", "Q", "K" ]
 
         type = piece.type
         oldLocation = point(self.fileToInt(piece.file), piece.rank-1)
@@ -31,9 +32,9 @@ class AI(BaseAI):
         #print("---", piece.id)
         if (not piece.captured):
             #print("Checking (", piece.file, ",", piece.rank, ") -> (", newFile, ",", newRank, "): ", self.moves[self.numMoves].location[newLocation.x][newLocation.y])
-            if (type == "Pawn"):
-                if (oldLocation == newLocation):
+            if (oldLocation == newLocation):
                     return False
+            elif (type == "Pawn"):
                 if (piece.file == newFile): # Moving Forward
                     for i in range(1, _range):
                         if (not self.moves[self.numMoves].location[newLocation.x][oldLocation.y + i*self.color] == ""):
@@ -59,6 +60,12 @@ class AI(BaseAI):
                         return True
                     else:
                         return False
+            elif (type == "Knight"):
+                if (oldLocation.x == newLocation.x):
+                    return False
+                elif (not self.moves[self.numMoves].location[newLocation.x][newLocation.y] in myPieces and 
+                    (self.moves[self.numMoves].location[newLocation.x][newLocation.y] in validPiecesToCapture or self.moves[self.numMoves].location[newLocation.x][newLocation.y] == "")):
+                    return True
         print("False")
         return False
 
@@ -175,7 +182,7 @@ class AI(BaseAI):
 
         # 2) print the opponent's last move to the console
         if len(self.game.moves) > 0:
-            print("Opponent's Last Move: '" + self.game.moves[-1].san + "'")
+            print("Opponent's Last Move: ", self.game.moves[-1].piece.type, "'", self.game.moves[-1].to_file, self.game.moves[-1].to_rank, "'")
 
         # 3) print how much time remaining this AI has to calculate moves
         print("Time Remaining: " + str(self.player.time_remaining) + " ns")
@@ -198,6 +205,34 @@ class AI(BaseAI):
                     currentPossibleMoves.append(move(self.moves[self.numMoves], self.pawn[i], i, self.add_file(self.pawn[i].file, 1), self.pawn[i].rank + 1*self.color))
                 if (not self.pawn[i].file == "a" and self.valid_move(self.pawn[i], self.add_file(self.pawn[i].file, -1), self.pawn[i].rank + 1*self.color)):
                     currentPossibleMoves.append(move(self.moves[self.numMoves], self.pawn[i], i, self.add_file(self.pawn[i].file, -1), self.pawn[i].rank + 1*self.color))
+        for i in range(len(self.knight)): # Check KNIGHT moves
+            if (not self.knight[i].captured): # If not captured
+                if (self.color == -1):
+                    if (not self.knight[i].file == "h" and self.knight[i].rank > 1 and
+                        self.valid_move(self.knight[i], self.add_file(self.knight[i].file, 1), self.knight[i].rank - 2)):
+                        currentPossibleMoves.append(move(self.moves[self.numMoves], self.knight[i], i, self.add_file(self.knight[i].file, 1), self.knight[i].rank - 2))
+                    if (not self.knight[i].file == "a" and self.knight[i].rank > 1 and
+                        self.valid_move(self.knight[i], self.add_file(self.knight[i].file, -1), self.knight[i].rank - 2)):
+                        currentPossibleMoves.append(move(self.moves[self.numMoves], self.knight[i], i, self.add_file(self.knight[i].file, -1), self.knight[i].rank - 2))
+                    if (not self.knight[i].file == "a" and not self.knight[i].file == "b" and self.knight[i].rank > 0 and
+                        self.valid_move(self.knight[i], self.add_file(self.knight[i].file, -2), self.knight[i].rank - 1)):
+                        currentPossibleMoves.append(move(self.moves[self.numMoves], self.knight[i], i, self.add_file(self.knight[i].file, -2), self.knight[i].rank - 1))
+                    if (not self.knight[i].file == "g" and not self.knight[i].file == "h" and self.knight[i].rank > 0 and
+                        self.valid_move(self.knight[i], self.add_file(self.knight[i].file, 2), self.knight[i].rank - 1)):
+                        currentPossibleMoves.append(move(self.moves[self.numMoves], self.knight[i], i, self.add_file(self.knight[i].file, 2), self.knight[i].rank - 1))
+                if (self.color == 1):
+                    if (not self.knight[i].file == "h" and self.knight[i].rank < 7 and
+                        self.valid_move(self.knight[i], self.add_file(self.knight[i].file, 1), self.knight[i].rank + 2)):
+                        currentPossibleMoves.append(move(self.moves[self.numMoves], self.knight[i], i, self.add_file(self.knight[i].file, 1), self.knight[i].rank + 2))
+                    if (not self.knight[i].file == "a" and self.knight[i].rank < 7 and
+                        self.valid_move(self.knight[i], self.add_file(self.knight[i].file, -1), self.knight[i].rank + 2)):
+                        currentPossibleMoves.append(move(self.moves[self.numMoves], self.knight[i], i, self.add_file(self.knight[i].file, -1), self.knight[i].rank + 2))
+                    if (not self.knight[i].file == "a" and not self.knight[i].file == "b" and self.knight[i].rank < 8 and
+                        self.valid_move(self.knight[i], self.add_file(self.knight[i].file, -2), self.knight[i].rank + 1)):
+                        currentPossibleMoves.append(move(self.moves[self.numMoves], self.knight[i], i, self.add_file(self.knight[i].file, -2), self.knight[i].rank + 1))
+                    if (not self.knight[i].file == "g" and not self.knight[i].file == "h" and self.knight[i].rank < 8 and
+                        self.valid_move(self.knight[i], self.add_file(self.knight[i].file, 2), self.knight[i].rank + 1)):
+                        currentPossibleMoves.append(move(self.moves[self.numMoves], self.knight[i], i, self.add_file(self.knight[i].file, 2), self.knight[i].rank + 1))
 
         randomMove = currentPossibleMoves[random.randrange(len(currentPossibleMoves))]
         _move = randomMove.actionObj.move(randomMove.newFile, randomMove.newRank, self.piece_types[random.randrange(len(self.piece_types))])
@@ -221,45 +256,16 @@ class AI(BaseAI):
         """Prints the current board using pretty ASCII art
         Note: you can delete this function if you wish
         """
-
+        #_files = [ "1", "b", "c", "d", "e", "f", "g", "h" ] _files[f]
+        print("  +------------------------+")
         # iterate through the range in reverse order
-        for r in range(9, -2, -1):
-            output = ""
-            if r == 9 or r == 0:
-                # then the top or bottom of the board
-                output = "   +------------------------+"
-            elif r == -1:
-                # then show the ranks
-                output = "     a  b  c  d  e  f  g  h"
-            else:  # board
-                output = " " + str(r) + " |"
-                # fill in all the files with pieces at the current rank
-                for file_offset in range(0, 8):
-                    # start at a, with with file offset increasing the char
-                    f = chr(ord("a") + file_offset)
-                    current_piece = None
-                    for piece in self.game.pieces:
-                        if piece.file == f and piece.rank == r:
-                            # then we found the piece at (file, rank)
-                            current_piece = piece
-                            break
-
-                    code = "."  # default "no piece"
-                    if current_piece:
-                        # the code will be the first character of their type
-                        # e.g.  'Q' for "Queen"
-                        code = current_piece.type[0]
-
-                        if current_piece.type == "Knight":
-                            # 'K' is for "King", we use 'N' for "Knights"
-                            code = "N"
-
-                        if current_piece.owner.id == "1":
-                            # the second player (black) is lower case.
-                            # Otherwise it's uppercase already
-                            code = code.lower()
-
-                    output += " " + code + " "
-
-                output += "|"
-            print(output)
+        for f in range(8):
+            print(f+1, "|", end="")
+            for r in range(8):
+                if (not self.moves[self.numMoves].location[r][f] == ""):
+                    print("", self.moves[self.numMoves].location[r][f], end=" ")
+                else:
+                    print(" . ", end="")
+            print("|")
+        print("  +------------------------+")
+        print("    a  b  c  d  e  f  g  h <- FILES")
