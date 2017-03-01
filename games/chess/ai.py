@@ -27,7 +27,8 @@ class AI(BaseAI):
         type = piece.type
         oldLocation = point(self.fileToInt(piece.file), piece.rank-1)
         newLocation = point(self.fileToInt(newFile), newRank-1)
-        _range = (abs(oldLocation.y - newLocation.y) + 1)
+        y_range = (abs(oldLocation.y - newLocation.y) + 1)
+        x_range = (abs(oldLocation.x - newLocation.x) + 1)
 
         #print("---", piece.id)
         if (not piece.captured):
@@ -36,7 +37,7 @@ class AI(BaseAI):
                     return False
             elif (type == "Pawn"):
                 if (piece.file == newFile): # Moving Forward
-                    for i in range(1, _range):
+                    for i in range(1, y_range):
                         if (not self.moves[self.numMoves].location[newLocation.x][oldLocation.y + i*self.color] == ""):
                             return False
                     return True
@@ -66,7 +67,37 @@ class AI(BaseAI):
                 elif (not self.moves[self.numMoves].location[newLocation.x][newLocation.y] in myPieces and 
                     (self.moves[self.numMoves].location[newLocation.x][newLocation.y] in validPiecesToCapture or self.moves[self.numMoves].location[newLocation.x][newLocation.y] == "")):
                     return True
-        print("False")
+            elif (type == "Bishop"):
+                if (oldLocation.x == newLocation.x):
+                    return False
+                elif (newLocation.x > 0 and newLocation.x < 8 and newLocation.y > 0 and newLocation.y < 8):
+                    x_distance = (newLocation.x - oldLocation.x)
+                    y_distance = (newLocation.y - oldLocation.y)
+                    if (x_distance > 0 and y_distance < 0): # Bottom Right Move
+                        for i in range(1, x_distance):
+                            if (not self.moves[self.numMoves].location[oldLocation.x + i][oldLocation.y - i] == ""):
+                                return False
+                        if (self.moves[self.numMoves].location[newLocation.x][newLocation.y] in validPiecesToCapture):
+                            return True
+                    elif (x_distance < 0 and y_distance < 0): # Bottom Left Move
+                        for i in range(1, abs(x_distance)):
+                            if (not self.moves[self.numMoves].location[oldLocation.x - i][oldLocation.y - i] == ""):
+                                return False
+                        if (self.moves[self.numMoves].location[newLocation.x][newLocation.y] in validPiecesToCapture):
+                            return True
+                    elif (x_distance < 0 and y_distance > 0): # Top Left Move
+                        for i in range(1, y_distance):
+                            if (not self.moves[self.numMoves].location[oldLocation.x - i][oldLocation.y + i] == ""):
+                                return False
+                        if (self.moves[self.numMoves].location[newLocation.x][newLocation.y] in validPiecesToCapture):
+                            return True
+                    elif (x_distance > 0 and y_distance > 0): # Top Left Move
+                        for i in range(1, y_distance):
+                            if (not self.moves[self.numMoves].location[oldLocation.x + i][oldLocation.y + i] == ""):
+                                return False
+                        if (self.moves[self.numMoves].location[newLocation.x][newLocation.y] in validPiecesToCapture):
+                            return True
+        #print("False")
         return False
 
     def fileToInt(self, file = "a"):
@@ -74,7 +105,13 @@ class AI(BaseAI):
         return files.index(file)
     def add_file(self, file, amount):
         files = [ "a", "b", "c", "d", "e", "f", "g", "h" ]
-        return files[files.index(file) + amount]
+        _f = files.index(file)
+        if (_f + amount > 7):
+            return "h"
+        elif (_f + amount < 0):
+            return "a"
+        else:
+            return files[_f + amount]
 
     def makeLastMove(self):
         numPieces = len(self.game.pieces)
@@ -214,10 +251,10 @@ class AI(BaseAI):
                     if (not self.knight[i].file == "a" and self.knight[i].rank > 1 and
                         self.valid_move(self.knight[i], self.add_file(self.knight[i].file, -1), self.knight[i].rank - 2)):
                         currentPossibleMoves.append(move(self.moves[self.numMoves], self.knight[i], i, self.add_file(self.knight[i].file, -1), self.knight[i].rank - 2))
-                    if (not self.knight[i].file == "a" and not self.knight[i].file == "b" and self.knight[i].rank > 0 and
+                    if (not self.knight[i].file == "a" and not self.knight[i].file == "b" and self.knight[i].rank > 1 and
                         self.valid_move(self.knight[i], self.add_file(self.knight[i].file, -2), self.knight[i].rank - 1)):
                         currentPossibleMoves.append(move(self.moves[self.numMoves], self.knight[i], i, self.add_file(self.knight[i].file, -2), self.knight[i].rank - 1))
-                    if (not self.knight[i].file == "g" and not self.knight[i].file == "h" and self.knight[i].rank > 0 and
+                    if (not self.knight[i].file == "g" and not self.knight[i].file == "h" and self.knight[i].rank > 1 and
                         self.valid_move(self.knight[i], self.add_file(self.knight[i].file, 2), self.knight[i].rank - 1)):
                         currentPossibleMoves.append(move(self.moves[self.numMoves], self.knight[i], i, self.add_file(self.knight[i].file, 2), self.knight[i].rank - 1))
                 if (self.color == 1):
@@ -233,6 +270,21 @@ class AI(BaseAI):
                     if (not self.knight[i].file == "g" and not self.knight[i].file == "h" and self.knight[i].rank < 8 and
                         self.valid_move(self.knight[i], self.add_file(self.knight[i].file, 2), self.knight[i].rank + 1)):
                         currentPossibleMoves.append(move(self.moves[self.numMoves], self.knight[i], i, self.add_file(self.knight[i].file, 2), self.knight[i].rank + 1))
+        for i in range(len(self.bishop)): # Check KNIGHT moves
+            if (not self.bishop[i].captured): # If not captured
+                for k in range(7):
+                    if (self.fileToInt(self.bishop[i].file) + k < 8 and self.bishop[i].rank - k > 0): # Bottom Right move
+                        if (self.valid_move(self.bishop[i], self.add_file(self.bishop[i].file, k), self.bishop[i].rank - k)):
+                            currentPossibleMoves.append(move(self.moves[self.numMoves], self.bishop[i], i, self.add_file(self.bishop[i].file, k), self.bishop[i].rank - k))
+                    if (self.fileToInt(self.bishop[i].file) - k > 0 and self.bishop[i].rank - k > 0): # Bottom Left move
+                        if (self.valid_move(self.bishop[i], self.add_file(self.bishop[i].file, -k), self.bishop[i].rank - k)):
+                            currentPossibleMoves.append(move(self.moves[self.numMoves], self.bishop[i], i, self.add_file(self.bishop[i].file, -k), self.bishop[i].rank - k))
+                    if (self.fileToInt(self.bishop[i].file) - k > 0 and self.bishop[i].rank + k < 8): # Top Left move
+                        if (self.valid_move(self.bishop[i], self.add_file(self.bishop[i].file, -k), self.bishop[i].rank + k)):
+                            currentPossibleMoves.append(move(self.moves[self.numMoves], self.bishop[i], i, self.add_file(self.bishop[i].file, -k), self.bishop[i].rank + k))
+                    if (self.fileToInt(self.bishop[i].file) + k < 8 and self.bishop[i].rank + k < 8): # Top Right move
+                        if (self.valid_move(self.bishop[i], self.add_file(self.bishop[i].file, k), self.bishop[i].rank + k)):
+                            currentPossibleMoves.append(move(self.moves[self.numMoves], self.bishop[i], i, self.add_file(self.bishop[i].file, k), self.bishop[i].rank + k))
 
         randomMove = currentPossibleMoves[random.randrange(len(currentPossibleMoves))]
         _move = randomMove.actionObj.move(randomMove.newFile, randomMove.newRank, self.piece_types[random.randrange(len(self.piece_types))])
@@ -259,7 +311,7 @@ class AI(BaseAI):
         #_files = [ "1", "b", "c", "d", "e", "f", "g", "h" ] _files[f]
         print("  +------------------------+")
         # iterate through the range in reverse order
-        for f in range(8):
+        for f in range(7, -1, -1):
             print(f+1, "|", end="")
             for r in range(8):
                 if (not self.moves[self.numMoves].location[r][f] == ""):
