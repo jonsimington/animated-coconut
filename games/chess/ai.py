@@ -108,6 +108,68 @@ class AI(BaseAI):
                 elif (newLocation.x > 0 and newLocation.x < 8 and newLocation.y > 0 and newLocation.y < 8):
                     x_distance = (newLocation.x - oldLocation.x)
                     y_distance = (newLocation.y - oldLocation.y)
+                    if (x_distance > 0 and newLocation.y == oldLocation.y): # Right Move
+                        for i in range(1, x_distance):
+                            if (not self.moves[self.numMoves].location[oldLocation.x + i][oldLocation.y] == ""):
+                                return False
+                        if (self.moves[self.numMoves].location[newLocation.x][newLocation.y] in validPiecesToCapture or
+                            self.moves[self.numMoves].location[newLocation.x][newLocation.y] == ""):
+                            return True
+                    elif (x_distance < 0 and newLocation.y == oldLocation.y): # Left Move
+                        for i in range(1, abs(x_distance)):
+                            if (not self.moves[self.numMoves].location[oldLocation.x - i][oldLocation.y] == ""):
+                                return False
+                        if (self.moves[self.numMoves].location[newLocation.x][newLocation.y] in validPiecesToCapture or
+                            self.moves[self.numMoves].location[newLocation.x][newLocation.y] == ""):
+                            return True
+                    elif (y_distance > 0 and newLocation.x == oldLocation.x): # Upwards Move
+                        for i in range(1, y_distance):
+                            if (not self.moves[self.numMoves].location[oldLocation.x][oldLocation.y + i] == ""):
+                                return False
+                        if (self.moves[self.numMoves].location[newLocation.x][newLocation.y] in validPiecesToCapture or
+                            self.moves[self.numMoves].location[newLocation.x][newLocation.y] == ""):
+                            return True
+                    elif (y_distance < 0 and newLocation.x == oldLocation.x): # Downwards Move
+                        for i in range(1, abs(y_distance)):
+                            if (not self.moves[self.numMoves].location[oldLocation.x][oldLocation.y - i] == ""):
+                                return False
+                        if (self.moves[self.numMoves].location[newLocation.x][newLocation.y] in validPiecesToCapture or
+                            self.moves[self.numMoves].location[newLocation.x][newLocation.y] == ""):
+                            return True
+                    elif (x_distance > 0 and y_distance < 0): # Bottom Right Move
+                        for i in range(1, x_distance):
+                            if (not self.moves[self.numMoves].location[oldLocation.x + i][oldLocation.y - i] == ""):
+                                return False
+                        if (self.moves[self.numMoves].location[newLocation.x][newLocation.y] in validPiecesToCapture or
+                            self.moves[self.numMoves].location[newLocation.x][newLocation.y] == ""):
+                            return True
+                    elif (x_distance < 0 and y_distance < 0): # Bottom Left Move
+                        for i in range(1, abs(x_distance)):
+                            if (not self.moves[self.numMoves].location[oldLocation.x - i][oldLocation.y - i] == ""):
+                                return False
+                        if (self.moves[self.numMoves].location[newLocation.x][newLocation.y] in validPiecesToCapture or
+                            self.moves[self.numMoves].location[newLocation.x][newLocation.y] == ""):
+                            return True
+                    elif (x_distance < 0 and y_distance > 0): # Top Left Move
+                        for i in range(1, y_distance):
+                            if (not self.moves[self.numMoves].location[oldLocation.x - i][oldLocation.y + i] == ""):
+                                return False
+                        if (self.moves[self.numMoves].location[newLocation.x][newLocation.y] in validPiecesToCapture or
+                            self.moves[self.numMoves].location[newLocation.x][newLocation.y] == ""):
+                            return True
+                    elif (x_distance > 0 and y_distance > 0): # Top Left Move
+                        for i in range(1, y_distance):
+                            if (not self.moves[self.numMoves].location[oldLocation.x + i][oldLocation.y + i] == ""):
+                                return False
+                        if (self.moves[self.numMoves].location[newLocation.x][newLocation.y] in validPiecesToCapture or
+                            self.moves[self.numMoves].location[newLocation.x][newLocation.y] == ""):
+                            return True
+            elif (type == "Queen"):
+                if (oldLocation.x == newLocation.x):
+                    return False
+                elif (newLocation.x > 0 and newLocation.x < 8 and newLocation.y > 0 and newLocation.y < 8):
+                    x_distance = (newLocation.x - oldLocation.x)
+                    y_distance = (newLocation.y - oldLocation.y)
                     if (x_distance > 0): # Right Move
                         for i in range(1, x_distance):
                             if (not self.moves[self.numMoves].location[oldLocation.x + i][oldLocation.y] == ""):
@@ -133,6 +195,36 @@ class AI(BaseAI):
                         for i in range(1, abs(y_distance)):
                             if (not self.moves[self.numMoves].location[oldLocation.x][oldLocation.y - i] == ""):
                                 return False
+                        if (self.moves[self.numMoves].location[newLocation.x][newLocation.y] in validPiecesToCapture or
+                            self.moves[self.numMoves].location[newLocation.x][newLocation.y] == ""):
+                            return True
+            elif (type == "King"):
+                if (oldLocation.x == newLocation.x):
+                    return False
+                elif (newLocation.x > 0 and newLocation.x < 8 and newLocation.y > 0 and newLocation.y < 8):
+                    x_distance = (newLocation.x - oldLocation.x)
+                    y_distance = (newLocation.y - oldLocation.y)
+                    if (x_distance > 0): # Right Move
+                        if (not self.moves[self.numMoves].location[oldLocation.x + 1][oldLocation.y] == ""):
+                            return False
+                        if (self.moves[self.numMoves].location[newLocation.x][newLocation.y] in validPiecesToCapture or
+                            self.moves[self.numMoves].location[newLocation.x][newLocation.y] == ""):
+                            return True
+                    elif (x_distance < 0): # Left Move
+                        if (not self.moves[self.numMoves].location[oldLocation.x - 1][oldLocation.y] == ""):
+                            return False
+                        if (self.moves[self.numMoves].location[newLocation.x][newLocation.y] in validPiecesToCapture or
+                            self.moves[self.numMoves].location[newLocation.x][newLocation.y] == ""):
+                            return True
+                    elif (y_distance > 0): # Upwards Move
+                        if (not self.moves[self.numMoves].location[oldLocation.x][oldLocation.y + 1] == ""):
+                            return False
+                        if (self.moves[self.numMoves].location[newLocation.x][newLocation.y] in validPiecesToCapture or
+                            self.moves[self.numMoves].location[newLocation.x][newLocation.y] == ""):
+                            return True
+                    elif (y_distance < 0): # Downwards Move
+                        if (not self.moves[self.numMoves].location[oldLocation.x][oldLocation.y - 1] == ""):
+                            return False
                         if (self.moves[self.numMoves].location[newLocation.x][newLocation.y] in validPiecesToCapture or
                             self.moves[self.numMoves].location[newLocation.x][newLocation.y] == ""):
                             return True
@@ -303,7 +395,7 @@ class AI(BaseAI):
                     if (not self.knight[i].file == "a" and self.knight[i].rank < 7 and
                         self.valid_move(self.knight[i], self.add_file(self.knight[i].file, -1), self.knight[i].rank + 2)):
                         currentPossibleMoves.append(move(self.moves[self.numMoves], self.knight[i], i, self.add_file(self.knight[i].file, -1), self.knight[i].rank + 2))
-                    if (not self.knight[i].file == "a" and not self.knight[i].file == "b" and self.knight[i].rank < 8 and
+                    if (not self.knight[i].file == "a" and not self.knight[i].file == "b" and self.knight[i].rank < 8 and	
                         self.valid_move(self.knight[i], self.add_file(self.knight[i].file, -2), self.knight[i].rank + 1)):
                         currentPossibleMoves.append(move(self.moves[self.numMoves], self.knight[i], i, self.add_file(self.knight[i].file, -2), self.knight[i].rank + 1))
                     if (not self.knight[i].file == "g" and not self.knight[i].file == "h" and self.knight[i].rank < 8 and
@@ -339,6 +431,59 @@ class AI(BaseAI):
                     if (self.rook[i].rank - k > 0): # Downwards move
                         if (self.valid_move(self.rook[i], self.rook[i].file, self.rook[i].rank - k)):
                             currentPossibleMoves.append(move(self.moves[self.numMoves], self.rook[i], i, self.rook[i].file, self.rook[i].rank - k))
+        for i in range(len(self.queen)): # Check ROOK moves
+            if (not self.queen[i].captured): # If not captured
+                for k in range(7):
+                    if (self.fileToInt(self.queen[i].file) + k < 8 and self.queen[i].rank - k > 0): # Bottom Right move
+                        if (self.valid_move(self.queen[i], self.add_file(self.queen[i].file, k), self.queen[i].rank - k)):
+                            currentPossibleMoves.append(move(self.moves[self.numMoves], self.queen[i], i, self.add_file(self.queen[i].file, k), self.queen[i].rank - k))
+                    if (self.fileToInt(self.queen[i].file) - k > 0 and self.queen[i].rank - k > 0): # Bottom Left move
+                        if (self.valid_move(self.queen[i], self.add_file(self.queen[i].file, -k), self.queen[i].rank - k)):
+                            currentPossibleMoves.append(move(self.moves[self.numMoves], self.queen[i], i, self.add_file(self.queen[i].file, -k), self.queen[i].rank - k))
+                    if (self.fileToInt(self.queen[i].file) - k > 0 and self.queen[i].rank + k < 8): # Top Left move
+                        if (self.valid_move(self.queen[i], self.add_file(self.queen[i].file, -k), self.queen[i].rank + k)):
+                            currentPossibleMoves.append(move(self.moves[self.numMoves], self.queen[i], i, self.add_file(self.queen[i].file, -k), self.queen[i].rank + k))
+                    if (self.fileToInt(self.queen[i].file) + k < 8 and self.queen[i].rank + k < 8): # Top Right move
+                        if (self.valid_move(self.queen[i], self.add_file(self.queen[i].file, k), self.queen[i].rank + k)):
+                            currentPossibleMoves.append(move(self.moves[self.numMoves], self.queen[i], i, self.add_file(self.queen[i].file, k), self.queen[i].rank + k))
+                    if (self.fileToInt(self.queen[i].file) + k < 8): # Right move
+                        if (self.valid_move(self.queen[i], self.add_file(self.queen[i].file, k), self.queen[i].rank)):
+                            currentPossibleMoves.append(move(self.moves[self.numMoves], self.queen[i], i, self.add_file(self.queen[i].file, k), self.queen[i].rank))
+                    if (self.fileToInt(self.queen[i].file) + k > 0): # Left move
+                        if (self.valid_move(self.queen[i], self.add_file(self.queen[i].file, -k), self.queen[i].rank)):
+                            currentPossibleMoves.append(move(self.moves[self.numMoves], self.queen[i], i, self.add_file(self.queen[i].file, -k), self.queen[i].rank))
+                    if (self.queen[i].rank + k < 8): # Upwards move
+                        if (self.valid_move(self.queen[i], self.queen[i].file, self.queen[i].rank + k)):
+                            currentPossibleMoves.append(move(self.moves[self.numMoves], self.queen[i], i, self.queen[i].file, self.queen[i].rank + k))
+                    if (self.queen[i].rank - k > 0): # Downwards move
+                        if (self.valid_move(self.queen[i], self.queen[i].file, self.queen[i].rank - k)):
+                            currentPossibleMoves.append(move(self.moves[self.numMoves], self.queen[i], i, self.queen[i].file, self.queen[i].rank - k))
+        for i in range(len(self.king)): # Check ROOK moves
+            if (not self.king[i].captured): # If not captured
+                if (self.fileToInt(self.king[i].file) + 1 < 8 and self.king[i].rank - 1 > 0): # Bottom Right move
+                    if (self.valid_move(self.king[i], self.add_file(self.king[i].file, 1), self.king[i].rank - 1)):
+                        currentPossibleMoves.append(move(self.moves[self.numMoves], self.king[i], i, self.add_file(self.king[i].file, 1), self.king[i].rank - 1))
+                if (self.fileToInt(self.king[i].file) - 1 > 0 and self.king[i].rank - 1 > 0): # Bottom Left move
+                    if (self.valid_move(self.king[i], self.add_file(self.king[i].file, -1), self.king[i].rank - 1)):
+                        currentPossibleMoves.append(move(self.moves[self.numMoves], self.king[i], i, self.add_file(self.king[i].file, -1), self.king[i].rank - 1))
+                if (self.fileToInt(self.king[i].file) - 1 > 0 and self.king[i].rank + 1 < 8): # Top Left move
+                    if (self.valid_move(self.king[i], self.add_file(self.king[i].file, -1), self.king[i].rank + 1)):
+                        currentPossibleMoves.append(move(self.moves[self.numMoves], self.king[i], i, self.add_file(self.king[i].file, -1), self.king[i].rank + 1))
+                if (self.fileToInt(self.king[i].file) + 1 < 8 and self.king[i].rank + 1 < 8): # Top Right move
+                    if (self.valid_move(self.king[i], self.add_file(self.king[i].file, 1), self.king[i].rank + 1)):
+                        currentPossibleMoves.append(move(self.moves[self.numMoves], self.king[i], i, self.add_file(self.king[i].file, 1), self.king[i].rank + 1))
+                if (self.fileToInt(self.king[i].file) + 1 < 8): # Right move
+                    if (self.valid_move(self.king[i], self.add_file(self.king[i].file, 1), self.king[i].rank)):
+                        currentPossibleMoves.append(move(self.moves[self.numMoves], self.king[i], i, self.add_file(self.king[i].file, 1), self.king[i].rank))
+                if (self.fileToInt(self.king[i].file) + 1 > 0): # Left move
+                    if (self.valid_move(self.king[i], self.add_file(self.king[i].file, -1), self.king[i].rank)):
+                        currentPossibleMoves.append(move(self.moves[self.numMoves], self.king[i], i, self.add_file(self.king[i].file, -1), self.king[i].rank))
+                if (self.king[i].rank + 1 < 8): # Upwards move
+                    if (self.valid_move(self.king[i], self.king[i].file, self.king[i].rank + 1)):
+                        currentPossibleMoves.append(move(self.moves[self.numMoves], self.king[i], i, self.king[i].file, self.king[i].rank + 1))
+                if (self.king[i].rank - 1 > 0): # Downwards move
+                    if (self.valid_move(self.king[i], self.king[i].file, self.king[i].rank - 1)):
+                        currentPossibleMoves.append(move(self.moves[self.numMoves], self.king[i], i, self.king[i].file, self.king[i].rank - 1))
 
         shuffle(currentPossibleMoves)
         randomMove = currentPossibleMoves[random.randrange(len(currentPossibleMoves))]
