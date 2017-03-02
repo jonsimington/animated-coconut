@@ -3,6 +3,9 @@ class point:
     def __init__(self, xx, yy):
         self.x = xx
         self.y = yy
+    def set(self, xx, yy):
+        self.x = xx
+        self.y = yy
     def __eq__(self, otherPt):
         if (self.x == otherPt.x and self.y == otherPt.y):
             return True
@@ -66,3 +69,39 @@ class move:
         self.actionObj = actObj
         self.pathCost = pathC
         self.actionObjNum = num
+
+####################################
+# A basic priority queue state
+class pQueue:
+    def __init__(self):
+        self.queue = []
+    #put: Puts a new object into the pQueue, with the given weight.
+    # - Looks through all items currently on the queue and compares that items weight
+    # - with the item you want to add's weight. The new item is put after all
+    # - items with the same weight
+    def put(self, item, weight = 0):
+        putOn = False
+        for i in range(len(self.queue)):
+            if (self.queue[i].priority > weight):
+                self.queue.insert(i, pQueueObject(item, weight))
+                putOn = True
+                break
+        if (not putOn):
+            self.queue.append(pQueueObject(item, weight))
+    #pop: Removes the top item of the queue, and returns it. Does not return the weight
+    def pop(self):
+        if (len(self.queue) > 0):
+            top = self.queue.pop(0)
+            return top.item
+        else:
+            print("Empty queue!")
+            return False
+    #qsize: Returns the size of the queue
+    def qsize(self):
+        return len(self.queue)
+
+# pQueueObject: used as a container for the information in each index of the pQueue
+class pQueueObject:
+    def __init__(self, data, weight):
+        self.item = data
+        self.priority = weight
