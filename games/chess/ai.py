@@ -5,6 +5,7 @@ import random
 from .rtanq9_chess import *
 from random import shuffle
 from copy import deepcopy
+from time import sleep
 
 class AI(BaseAI):
     """ The basic AI functions that are the same between games. """
@@ -387,30 +388,44 @@ class AI(BaseAI):
                 elif (newLocation.x >= 0 and newLocation.x < 8 and newLocation.y >= 0 and newLocation.y < 8):
                     x_distance = (newLocation.x - oldLocation.x)
                     y_distance = (newLocation.y - oldLocation.y)
-                    if (newLocation.y == oldLocation.y): # Left/Right Move
+                    if (newLocation.y == oldLocation.y and  abs(x_distance) == 1): # Left/Right Move
                         if (self.moves[self.numMoves].location[newLocation.x][newLocation.y] in validPiecesToCapture or
                             self.moves[self.numMoves].location[newLocation.x][newLocation.y] == ""):
                             return True
-                    elif (newLocation.x == oldLocation.x): # Upwards/Downwards Move
+                    elif (newLocation.x == oldLocation.x and abs(y_distance) == 1): # Upwards/Downwards Move
                         if (self.moves[self.numMoves].location[newLocation.x][newLocation.y] in validPiecesToCapture or
                             self.moves[self.numMoves].location[newLocation.x][newLocation.y] == ""):
                             return True
-                    elif (x_distance > 0 and y_distance < 0): # Bottom Right Move
+                    elif (x_distance == 1 and y_distance == -1): # Bottom Right Move
                         if (self.moves[self.numMoves].location[newLocation.x][newLocation.y] in validPiecesToCapture or
                             self.moves[self.numMoves].location[newLocation.x][newLocation.y] == ""):
                             return True
-                    elif (x_distance < 0 and y_distance < 0): # Bottom Left Move
+                    elif (x_distance == -1 and y_distance == -1): # Bottom Left Move
                         if (self.moves[self.numMoves].location[newLocation.x][newLocation.y] in validPiecesToCapture or
                             self.moves[self.numMoves].location[newLocation.x][newLocation.y] == ""):
                             return True
-                    elif (x_distance < 0 and y_distance > 0): # Top Left Move
+                    elif (x_distance == -1 and y_distance == 1): # Top Left Move
                         if (self.moves[self.numMoves].location[newLocation.x][newLocation.y] in validPiecesToCapture or
                             self.moves[self.numMoves].location[newLocation.x][newLocation.y] == ""):
                             return True
-                    elif (x_distance > 0 and y_distance > 0): # Top Right Move
+                    elif (x_distance == 1 and y_distance == 1): # Top Right Move
                         if (self.moves[self.numMoves].location[newLocation.x][newLocation.y] in validPiecesToCapture or
                             self.moves[self.numMoves].location[newLocation.x][newLocation.y] == ""):
                             return True
+                    elif (x_distance == 2 and y_distance == 0 and ((piece.rank == 0 and self.color == 1) or (piece.rank == 8 and self.color == -1)) and 
+                          self.moves[self.numMoves].location[7][newLocation.y] == "R"): # Castling Right
+                        for i in range(1, 3):
+                            if (not self.moves[self.numMoves].location[oldLocation.x + i][oldLocation.y] == ""):
+                                return False
+                        print("Castling Right")
+                        return True
+                    elif (x_distance == -2 and y_distance == 0 and ((piece.rank == 0 and self.color == 1) or (piece.rank == 8 and self.color == -1)) and 
+                          self.moves[self.numMoves].location[0][newLocation.y] == "R"): # Castling Left
+                        for i in range(1, 4):
+                            if (not self.moves[self.numMoves].location[oldLocation.x - i][oldLocation.y] == ""):
+                                return False
+                        print("Castling Left")
+                        return True
         #print("False")
         return False
 
@@ -595,7 +610,7 @@ class AI(BaseAI):
                     currentPossibleMoves.append(self.create_move(self.knight[i], i, self.add_file(self.knight[i].file, 2), self.knight[i].rank + 1))
         for i in range(len(self.bishop)): # Check BISHOP moves
             if (not self.bishop[i].captured): # If not captured
-                for k in range(7):
+                for k in range(8):
                     if (self.fileToInt(self.bishop[i].file) + k < 8 and self.bishop[i].rank - k >= 0): # Bottom Right move
                         if (self.valid_move(self.bishop[i], self.add_file(self.bishop[i].file, k), self.bishop[i].rank - k)):
                             currentPossibleMoves.append(self.create_move(self.bishop[i], i, self.add_file(self.bishop[i].file, k), self.bishop[i].rank - k))
@@ -610,7 +625,7 @@ class AI(BaseAI):
                             currentPossibleMoves.append(self.create_move(self.bishop[i], i, self.add_file(self.bishop[i].file, k), self.bishop[i].rank + k))
         for i in range(len(self.rook)): # Check ROOK moves
             if (not self.rook[i].captured): # If not captured
-                for k in range(7):
+                for k in range(8):
                     if (self.fileToInt(self.rook[i].file) + k < 8): # Right move
                         if (self.valid_move(self.rook[i], self.add_file(self.rook[i].file, k), self.rook[i].rank)):
                             currentPossibleMoves.append(self.create_move(self.rook[i], i, self.add_file(self.rook[i].file, k), self.rook[i].rank))
@@ -626,7 +641,7 @@ class AI(BaseAI):
                             currentPossibleMoves.append(self.create_move(self.rook[i], i, self.rook[i].file, self.rook[i].rank - k))
         for i in range(len(self.queen)): # Check QUEEN moves
             if (not self.queen[i].captured): # If not captured
-                for k in range(7):
+                for k in range(8):
                     if (self.fileToInt(self.queen[i].file) + k < 8 and self.queen[i].rank - k >= 0): # Bottom Right move
                         if (self.valid_move(self.queen[i], self.add_file(self.queen[i].file, k), self.queen[i].rank - k)):
                             currentPossibleMoves.append(self.create_move(self.queen[i], i, self.add_file(self.queen[i].file, k), self.queen[i].rank - k))
@@ -668,7 +683,7 @@ class AI(BaseAI):
                 if (self.fileToInt(self.king[0].file) + 1 < 8): # Right move
                     if (self.valid_move(self.king[0], self.add_file(self.king[0].file, 1), self.king[0].rank)):
                         currentPossibleMoves.append(self.create_move(self.king[0], 0, self.add_file(self.king[0].file, 1), self.king[0].rank))
-                if (self.fileToInt(self.king[0].file) + 1 >= 0): # Left move
+                if (self.fileToInt(self.king[0].file) - 1 >= 0): # Left move
                     if (self.valid_move(self.king[0], self.add_file(self.king[0].file, -1), self.king[0].rank)):
                         currentPossibleMoves.append(self.create_move(self.king[0], 0, self.add_file(self.king[0].file, -1), self.king[0].rank))
                 if (self.king[0].rank + 1 <= 8): # Upwards move
@@ -677,6 +692,16 @@ class AI(BaseAI):
                 if (self.king[0].rank - 1 >= 0): # Downwards move
                     if (self.valid_move(self.king[0], self.king[0].file, self.king[0].rank - 1)):
                         currentPossibleMoves.append(self.create_move(self.king[0], 0, self.king[0].file, self.king[0].rank - 1))
+                # CASTLING
+                if (not self.king[0].has_moved):
+                    for i in range(0, len(self.rook)):
+                        if (not self.rook[i].has_moved and not self.rook[i].captured):
+                            if (self.fileToInt(self.rook[i].file) > self.fileToInt(self.king[0].file)):
+                                if (self.valid_move(self.king[0], self.add_file(self.king[0].file, 2), self.king[0].rank)):
+                                    currentPossibleMoves.append(self.create_move(self.king[0], 0, self.add_file(self.king[0].file, 2), self.king[0].rank))
+                            elif (self.fileToInt(self.rook[i].file) < self.fileToInt(self.king[0].file)):
+                                if (self.valid_move(self.king[0], self.add_file(self.king[0].file, -2), self.king[0].rank)):
+                                    currentPossibleMoves.append(self.create_move(self.king[0], 0, self.add_file(self.king[0].file, -2), self.king[0].rank))
         #shuffle(currentPossibleMoves)
         randomNum = random.randrange(len(currentPossibleMoves))
         if (self.player.in_check):
