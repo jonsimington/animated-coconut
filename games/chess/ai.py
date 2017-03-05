@@ -26,6 +26,8 @@ class AI(BaseAI):
         kingPos = point(self.fileToInt(self.king[0].file), self.king[0].rank-1)
         if (_move.actionObj.type == "King"):
             kingPos = point(self.fileToInt(_move.newFile), _move.newRank-1)
+            if (self.fileToInt(_move.actionObj.file) == kingPos.x + 2 or self.fileToInt(_move.actionObj.file) == kingPos.x - 2):
+                return False # Can't castle while in check!
 
         foundPiece = False
         _piece = point(0, 0)
@@ -35,7 +37,7 @@ class AI(BaseAI):
         straight_blocks_nonadjacent = [ "p", "k" ]
         diagonal_blocks_nonadjacent = [ "p", "k" ]
         diagonal_blocks = [ "n", "r" ]
-        straight_blocks = [ "n", "b" ]
+        straight_blocks = [ "n", "b", "p" ]
         topLeft = False
         above = False
         topRight = False
@@ -195,6 +197,7 @@ class AI(BaseAI):
                 return True
             distance += 1
         # END WHILE
+        
         return foundPiece
 
 
@@ -242,6 +245,18 @@ class AI(BaseAI):
                          self.moves[self.numMoves].location[oldLocation.x - 1][oldLocation.y] == "p" and self.moves[self.numMoves - 1].location[oldLocation.x - 1][oldLocation.y + self.color] == "" and
                          self.moves[self.numMoves - 1].location[oldLocation.x - 1][oldLocation.y] == "" and self.moves[self.numMoves].location[oldLocation.x - 1][oldLocation.y + self.color] == "")):
                         return True
+                    elif (self.numMoves == 0):
+                        _FEN =  self.game.fen.split(" ")
+                        if (not _FEN[3] == "-"):
+                           # and ((piece.rank == 4 and self.color == -1) or (piece.rank == 3 and self.color == 1)) and # En Passant
+                           for i in range(len(_FEN[3])/2):
+                               _f = self.fileToInt(_FEN[i*2])
+                               _r = int(_FEN[i*2+1])
+                               if (oldLocation.x == _f + 1 or oldLocation.x == _f - 1):
+                                   if (oldLocation.y == _r):
+                                       return True
+                        else:
+                            return False
                     else:
                         return False
             elif (type == "Knight"):
@@ -417,14 +432,12 @@ class AI(BaseAI):
                         for i in range(1, 3):
                             if (not self.moves[self.numMoves].location[oldLocation.x + i][oldLocation.y] == ""):
                                 return False
-                        print("Castling Right")
                         return True
                     elif (x_distance == -2 and y_distance == 0 and ((piece.rank == 0 and self.color == 1) or (piece.rank == 8 and self.color == -1)) and 
                           self.moves[self.numMoves].location[0][newLocation.y] == "R"): # Castling Left
                         for i in range(1, 4):
                             if (not self.moves[self.numMoves].location[oldLocation.x - i][oldLocation.y] == ""):
                                 return False
-                        print("Castling Left")
                         return True
         #print("False")
         return False
@@ -558,11 +571,11 @@ class AI(BaseAI):
         self.print_current_board()
 
         # 2) print the opponent's last move to the console
-        if len(self.game.moves) > 0:
-            print("Opponent's Last Move: ", self.game.moves[-1].piece.type, "'", self.game.moves[-1].to_file, self.game.moves[-1].to_rank, "'")
+        #if len(self.game.moves) > 0:
+            #print("Opponent's Last Move: ", self.game.moves[-1].piece.type, "'", self.game.moves[-1].to_file, self.game.moves[-1].to_rank, "'")
 
         # 3) print how much time remaining this AI has to calculate moves
-        print("Time Remaining: " + str(self.player.time_remaining) + " ns")
+        #print("Time Remaining: " + str(self.player.time_remaining) + " ns")
 
         # 4) make a random (and probably invalid) move.
         #random_piece = random.choice(self.player.pieces)
@@ -703,20 +716,46 @@ class AI(BaseAI):
                                 if (self.valid_move(self.king[0], self.add_file(self.king[0].file, -2), self.king[0].rank)):
                                     currentPossibleMoves.append(self.create_move(self.king[0], 0, self.add_file(self.king[0].file, -2), self.king[0].rank))
         #shuffle(currentPossibleMoves)
-        randomNum = random.randrange(len(currentPossibleMoves))
+        
         if (self.player.in_check):
             print("In Check...")
             
-        check = True
-        while (check):
-            check = self.find_check_piece(currentPossibleMoves[randomNum])
-            if (check):
-                print("Deleting move...", currentPossibleMoves[randomNum].actionObj.type, currentPossibleMoves[randomNum].newFile, currentPossibleMoves[randomNum].newRank)
-                del currentPossibleMoves[randomNum]
-                randomNum = random.randrange(len(currentPossibleMoves))
-        
+        #check = True
+        #numMoves = len(currentPossibleMoves)
+        #while (check):
+        #    check = self.find_check_piece(currentPossibleMoves[randomNum])
+        #    if (check):
+        #        #print("Deleting move...", currentPossibleMoves[randomNum].actionObj.type, currentPossibleMoves[randomNum].newFile, currentPossibleMoves[randomNum].newRank)
+        #        del currentPossibleMoves[randomNum]
+        #        randomNum = random.randrange(len(currentPossibleMoves))
+        numMoves = len(currentPossibleMoves)
+        k = 0
+        while (k < numMoves):
+            if (self.find_check_piece(currentPossibleMoves[k])):
+                del currentPossibleMoves[k]
+                numMoves -= 1
+            else:
+                k += 1
+
+        randomNum = random.randrange(len(currentPossibleMoves))
         randomMove = currentPossibleMoves[randomNum]
+
         _move = randomMove.actionObj.move(randomMove.newFile, randomMove.newRank, self.piece_types[random.randrange(len(self.piece_types))])
+        print("Moving", randomMove.actionObj.type, "#" + str(randomMove.actionObj.id), "to '" + str(randomMove.newFile) + str(randomMove.newRank) + "'")
+
+        print("Other Possible moves for", str(randomMove.actionObj.type) + ":")
+
+        numExtraMoves = 0
+        listNum = 1
+        for i in range(len(currentPossibleMoves)):
+            if (not i == randomNum):
+                if (currentPossibleMoves[i].actionObj.type == randomMove.actionObj.type):
+                    print("\t" + str(listNum) + ".", str(currentPossibleMoves[i].newFile) + str(currentPossibleMoves[i].newRank))
+                    listNum += 1
+                    numExtraMoves += 1
+        if (numExtraMoves == 0):
+            print("\tNo other valid moves!")
+
         if (not _move.promotion == ""):
             if (_move.promotion == "Bishop"):
                 self.bishop.append(_move.piece)
