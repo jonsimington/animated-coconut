@@ -338,7 +338,7 @@ class AI(BaseAI):
             elif (type == "Queen"):
                 if (oldLocation.x == newLocation.x and oldLocation.y == newLocation.x):
                     return False
-                elif (newLocation.x > 0 and newLocation.x < 8 and newLocation.y > 0 and newLocation.y < 8):
+                elif (newLocation.x >= 0 and newLocation.x < 8 and newLocation.y >= 0 and newLocation.y < 8):
                     x_distance = (newLocation.x - oldLocation.x)
                     y_distance = (newLocation.y - oldLocation.y)
                     if (x_distance > 0 and newLocation.y == oldLocation.y): # Right Move
@@ -732,6 +732,7 @@ class AI(BaseAI):
         k = 0
         while (k < numMoves):
             if (self.find_check_piece(currentPossibleMoves[k])):
+                #print("Deleting move...", currentPossibleMoves[k].actionObj.type, currentPossibleMoves[k].newFile, currentPossibleMoves[k].newRank)
                 del currentPossibleMoves[k]
                 numMoves -= 1
             else:
