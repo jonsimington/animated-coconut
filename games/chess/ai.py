@@ -673,7 +673,7 @@ class AI(BaseAI):
                     if (self.fileToInt(self.queen[i].file) + k >= 0): # Left move
                         if (self.valid_move(self.queen[i], self.add_file(self.queen[i].file, -k), self.queen[i].rank)):
                             currentPossibleMoves.append(self.create_move(self.queen[i], i, self.add_file(self.queen[i].file, -k), self.queen[i].rank))
-                    if (self.queen[i].rank + k < 8): # Upwards move
+                    if (self.queen[i].rank + k <= 8): # Upwards move
                         if (self.valid_move(self.queen[i], self.queen[i].file, self.queen[i].rank + k)):
                             currentPossibleMoves.append(self.create_move(self.queen[i], i, self.queen[i].file, self.queen[i].rank + k))
                     if (self.queen[i].rank - k >= 0): # Downwards move
