@@ -535,6 +535,143 @@ class AI(BaseAI):
                     self.moves[self.numMoves].location[self.fileToInt(self.game.pieces[i].file)][self.game.pieces[i].rank-1] = "K"
         #self.moves[self.numMoves].location.reverse()
         #print(self.moves[self.numMoves].location)
+
+    def getMyMoves(self):
+        currentPossibleMoves = pQueue()
+
+        for i in range(len(self.pawn)): # Check PAWN moves
+            if (not self.pawn[i].captured): # If not captured
+                if (not self.pawn[i].has_moved): # If hasn't moved from starting position
+                    if (self.valid_move(self.pawn[i], self.pawn[i].file, self.pawn[i].rank + 2*self.color)):
+                        currentPossibleMoves.put(*self.create_move(self.pawn[i], i, self.pawn[i].file, self.pawn[i].rank + 2*self.color))
+                if (self.valid_move(self.pawn[i], self.pawn[i].file, self.pawn[i].rank + 1*self.color)):
+                    currentPossibleMoves.put(*self.create_move(self.pawn[i], i, self.pawn[i].file, self.pawn[i].rank + 1*self.color))
+                if (not self.pawn[i].file == "h" and self.valid_move(self.pawn[i], self.add_file(self.pawn[i].file, 1), self.pawn[i].rank + 1*self.color)):
+                    currentPossibleMoves.put(*self.create_move(self.pawn[i], i, self.add_file(self.pawn[i].file, 1), self.pawn[i].rank + 1*self.color))
+                if (not self.pawn[i].file == "a" and self.valid_move(self.pawn[i], self.add_file(self.pawn[i].file, -1), self.pawn[i].rank + 1*self.color)):
+                    currentPossibleMoves.put(*self.create_move(self.pawn[i], i, self.add_file(self.pawn[i].file, -1), self.pawn[i].rank + 1*self.color))
+        for i in range(len(self.knight)): # Check KNIGHT moves
+            if (not self.knight[i].captured): # If not captured
+                if (not self.knight[i].file == "h" and self.knight[i].rank > 2 and
+                    self.valid_move(self.knight[i], self.add_file(self.knight[i].file, 1), self.knight[i].rank - 2)):
+                    currentPossibleMoves.put(*self.create_move(self.knight[i], i, self.add_file(self.knight[i].file, 1), self.knight[i].rank - 2))
+                if (not self.knight[i].file == "a" and self.knight[i].rank > 2 and
+                    self.valid_move(self.knight[i], self.add_file(self.knight[i].file, -1), self.knight[i].rank - 2)):
+                    currentPossibleMoves.put(*self.create_move(self.knight[i], i, self.add_file(self.knight[i].file, -1), self.knight[i].rank - 2))
+                if (not self.knight[i].file == "a" and not self.knight[i].file == "b" and self.knight[i].rank > 1 and
+                    self.valid_move(self.knight[i], self.add_file(self.knight[i].file, -2), self.knight[i].rank - 1)):
+                    currentPossibleMoves.put(*self.create_move(self.knight[i], i, self.add_file(self.knight[i].file, -2), self.knight[i].rank - 1))
+                if (not self.knight[i].file == "g" and not self.knight[i].file == "h" and self.knight[i].rank > 1 and
+                    self.valid_move(self.knight[i], self.add_file(self.knight[i].file, 2), self.knight[i].rank - 1)):
+                    currentPossibleMoves.put(*self.create_move(self.knight[i], i, self.add_file(self.knight[i].file, 2), self.knight[i].rank - 1))
+                if (not self.knight[i].file == "h" and self.knight[i].rank < 7 and
+                    self.valid_move(self.knight[i], self.add_file(self.knight[i].file, 1), self.knight[i].rank + 2)):
+                    currentPossibleMoves.put(*self.create_move(self.knight[i], i, self.add_file(self.knight[i].file, 1), self.knight[i].rank + 2))
+                if (not self.knight[i].file == "a" and self.knight[i].rank < 7 and
+                    self.valid_move(self.knight[i], self.add_file(self.knight[i].file, -1), self.knight[i].rank + 2)):
+                    currentPossibleMoves.put(*self.create_move(self.knight[i], i, self.add_file(self.knight[i].file, -1), self.knight[i].rank + 2))
+                if (not self.knight[i].file == "a" and not self.knight[i].file == "b" and self.knight[i].rank <= 8 and	
+                    self.valid_move(self.knight[i], self.add_file(self.knight[i].file, -2), self.knight[i].rank + 1)):
+                    currentPossibleMoves.put(*self.create_move(self.knight[i], i, self.add_file(self.knight[i].file, -2), self.knight[i].rank + 1))
+                if (not self.knight[i].file == "g" and not self.knight[i].file == "h" and self.knight[i].rank <= 8 and
+                    self.valid_move(self.knight[i], self.add_file(self.knight[i].file, 2), self.knight[i].rank + 1)):
+                    currentPossibleMoves.put(*self.create_move(self.knight[i], i, self.add_file(self.knight[i].file, 2), self.knight[i].rank + 1))
+        for i in range(len(self.bishop)): # Check BISHOP moves
+            if (not self.bishop[i].captured): # If not captured
+                for k in range(8):
+                    if (self.fileToInt(self.bishop[i].file) + k < 8 and self.bishop[i].rank - k >= 0): # Bottom Right move
+                        if (self.valid_move(self.bishop[i], self.add_file(self.bishop[i].file, k), self.bishop[i].rank - k)):
+                            currentPossibleMoves.put(*self.create_move(self.bishop[i], i, self.add_file(self.bishop[i].file, k), self.bishop[i].rank - k))
+                    if (self.fileToInt(self.bishop[i].file) - k >= 0 and self.bishop[i].rank - k >= 0): # Bottom Left move
+                        if (self.valid_move(self.bishop[i], self.add_file(self.bishop[i].file, -k), self.bishop[i].rank - k)):
+                            currentPossibleMoves.put(*self.create_move(self.bishop[i], i, self.add_file(self.bishop[i].file, -k), self.bishop[i].rank - k))
+                    if (self.fileToInt(self.bishop[i].file) - k >= 0 and self.bishop[i].rank + k <= 8): # Top Left move
+                        if (self.valid_move(self.bishop[i], self.add_file(self.bishop[i].file, -k), self.bishop[i].rank + k)):
+                            currentPossibleMoves.put(*self.create_move(self.bishop[i], i, self.add_file(self.bishop[i].file, -k), self.bishop[i].rank + k))
+                    if (self.fileToInt(self.bishop[i].file) + k < 8 and self.bishop[i].rank + k <= 8): # Top Right move
+                        if (self.valid_move(self.bishop[i], self.add_file(self.bishop[i].file, k), self.bishop[i].rank + k)):
+                            currentPossibleMoves.put(*self.create_move(self.bishop[i], i, self.add_file(self.bishop[i].file, k), self.bishop[i].rank + k))
+        for i in range(len(self.rook)): # Check ROOK moves
+            if (not self.rook[i].captured): # If not captured
+                for k in range(8):
+                    if (self.fileToInt(self.rook[i].file) + k < 8): # Right move
+                        if (self.valid_move(self.rook[i], self.add_file(self.rook[i].file, k), self.rook[i].rank)):
+                            currentPossibleMoves.put(*self.create_move(self.rook[i], i, self.add_file(self.rook[i].file, k), self.rook[i].rank))
+                    if (self.fileToInt(self.rook[i].file) + k >= 0): # Left move
+                        if (self.valid_move(self.rook[i], self.add_file(self.rook[i].file, -k), self.rook[i].rank)):
+                            currentPossibleMoves.put(*self.create_move(self.rook[i], i, self.add_file(self.rook[i].file, -k), self.rook[i].rank))
+                    if (self.rook[i].rank + k <= 8): # Upwards move
+                        if (self.valid_move(self.rook[i], self.rook[i].file, self.rook[i].rank + k)):
+                            currentPossibleMoves.put(*self.create_move(self.rook[i], i, self.rook[i].file, self.rook[i].rank + k))
+                    if (self.rook[i].rank - k >= 0): # Downwards move
+                        #print("Rook Down?")
+                        if (self.valid_move(self.rook[i], self.rook[i].file, self.rook[i].rank - k)):
+                            currentPossibleMoves.put(*self.create_move(self.rook[i], i, self.rook[i].file, self.rook[i].rank - k))
+        for i in range(len(self.queen)): # Check QUEEN moves
+            if (not self.queen[i].captured): # If not captured
+                for k in range(8):
+                    if (self.fileToInt(self.queen[i].file) + k < 8 and self.queen[i].rank - k >= 0): # Bottom Right move
+                        if (self.valid_move(self.queen[i], self.add_file(self.queen[i].file, k), self.queen[i].rank - k)):
+                            currentPossibleMoves.put(*self.create_move(self.queen[i], i, self.add_file(self.queen[i].file, k), self.queen[i].rank - k))
+                    if (self.fileToInt(self.queen[i].file) - k >= 0 and self.queen[i].rank - k >= 0): # Bottom Left move
+                        if (self.valid_move(self.queen[i], self.add_file(self.queen[i].file, -k), self.queen[i].rank - k)):
+                            currentPossibleMoves.put(*self.create_move(self.queen[i], i, self.add_file(self.queen[i].file, -k), self.queen[i].rank - k))
+                    if (self.fileToInt(self.queen[i].file) - k >= 0 and self.queen[i].rank + k <= 8): # Top Left move
+                        if (self.valid_move(self.queen[i], self.add_file(self.queen[i].file, -k), self.queen[i].rank + k)):
+                            currentPossibleMoves.put(*self.create_move(self.queen[i], i, self.add_file(self.queen[i].file, -k), self.queen[i].rank + k))
+                    if (self.fileToInt(self.queen[i].file) + k < 8 and self.queen[i].rank + k <= 8): # Top Right move
+                        if (self.valid_move(self.queen[i], self.add_file(self.queen[i].file, k), self.queen[i].rank + k)):
+                            currentPossibleMoves.put(*self.create_move(self.queen[i], i, self.add_file(self.queen[i].file, k), self.queen[i].rank + k))
+                    if (self.fileToInt(self.queen[i].file) + k < 8): # Right move
+                        if (self.valid_move(self.queen[i], self.add_file(self.queen[i].file, k), self.queen[i].rank)):
+                            currentPossibleMoves.put(*self.create_move(self.queen[i], i, self.add_file(self.queen[i].file, k), self.queen[i].rank))
+                    if (self.fileToInt(self.queen[i].file) + k >= 0): # Left move
+                        if (self.valid_move(self.queen[i], self.add_file(self.queen[i].file, -k), self.queen[i].rank)):
+                            currentPossibleMoves.put(*self.create_move(self.queen[i], i, self.add_file(self.queen[i].file, -k), self.queen[i].rank))
+                    if (self.queen[i].rank + k <= 8): # Upwards move
+                        if (self.valid_move(self.queen[i], self.queen[i].file, self.queen[i].rank + k)):
+                            currentPossibleMoves.put(*self.create_move(self.queen[i], i, self.queen[i].file, self.queen[i].rank + k))
+                    if (self.queen[i].rank - k >= 0): # Downwards move
+                        if (self.valid_move(self.queen[i], self.queen[i].file, self.queen[i].rank - k)):
+                            currentPossibleMoves.put(*self.create_move(self.queen[i], i, self.queen[i].file, self.queen[i].rank - k))
+        for i in range(len(self.king)): # Check KING moves
+            if (not self.king[0].captured): # If not captured
+                if (self.fileToInt(self.king[0].file) + 1 < 8 and self.king[0].rank - 1 >= 0): # Bottom Right move
+                    if (self.valid_move(self.king[0], self.add_file(self.king[0].file, 1), self.king[0].rank - 1)):
+                        currentPossibleMoves.put(*self.create_move(self.king[0], 0, self.add_file(self.king[0].file, 1), self.king[0].rank - 1))
+                if (self.fileToInt(self.king[0].file) - 1 >= 0 and self.king[0].rank - 1 >= 0): # Bottom Left move
+                    if (self.valid_move(self.king[0], self.add_file(self.king[0].file, -1), self.king[0].rank - 1)):
+                        currentPossibleMoves.put(*self.create_move(self.king[0], 0, self.add_file(self.king[0].file, -1), self.king[0].rank - 1))
+                if (self.fileToInt(self.king[0].file) - 1 >= 0 and self.king[0].rank + 1 <= 8): # Top Left move
+                    if (self.valid_move(self.king[0], self.add_file(self.king[0].file, -1), self.king[0].rank + 1)):
+                        currentPossibleMoves.put(*self.create_move(self.king[0], 0, self.add_file(self.king[0].file, -1), self.king[0].rank + 1))
+                if (self.fileToInt(self.king[0].file) + 1 < 8 and self.king[0].rank + 1 <= 8): # Top Right move
+                    if (self.valid_move(self.king[0], self.add_file(self.king[0].file, 1), self.king[0].rank + 1)):
+                        currentPossibleMoves.put(*self.create_move(self.king[0], 0, self.add_file(self.king[0].file, 1), self.king[0].rank + 1))
+                if (self.fileToInt(self.king[0].file) + 1 < 8): # Right move
+                    if (self.valid_move(self.king[0], self.add_file(self.king[0].file, 1), self.king[0].rank)):
+                        currentPossibleMoves.put(*self.create_move(self.king[0], 0, self.add_file(self.king[0].file, 1), self.king[0].rank))
+                if (self.fileToInt(self.king[0].file) - 1 >= 0): # Left move
+                    if (self.valid_move(self.king[0], self.add_file(self.king[0].file, -1), self.king[0].rank)):
+                        currentPossibleMoves.put(*self.create_move(self.king[0], 0, self.add_file(self.king[0].file, -1), self.king[0].rank))
+                if (self.king[0].rank + 1 <= 8): # Upwards move
+                    if (self.valid_move(self.king[0], self.king[0].file, self.king[0].rank + 1)):
+                        currentPossibleMoves.put(*self.create_move(self.king[0], 0, self.king[0].file, self.king[0].rank + 1))
+                if (self.king[0].rank - 1 >= 0): # Downwards move
+                    if (self.valid_move(self.king[0], self.king[0].file, self.king[0].rank - 1)):
+                        currentPossibleMoves.put(*self.create_move(self.king[0], 0, self.king[0].file, self.king[0].rank - 1))
+                # CASTLING
+                if (not self.king[0].has_moved):
+                    for i in range(0, len(self.rook)):
+                        if (not self.rook[i].has_moved and not self.rook[i].captured):
+                            if (self.fileToInt(self.rook[i].file) > self.fileToInt(self.king[0].file)):
+                                if (self.valid_move(self.king[0], self.add_file(self.king[0].file, 2), self.king[0].rank)):
+                                    currentPossibleMoves.put(*self.create_move(self.king[0], 0, self.add_file(self.king[0].file, 2), self.king[0].rank))
+                            elif (self.fileToInt(self.rook[i].file) < self.fileToInt(self.king[0].file)):
+                                if (self.valid_move(self.king[0], self.add_file(self.king[0].file, -2), self.king[0].rank)):
+                                    currentPossibleMoves.put(*self.create_move(self.king[0], 0, self.add_file(self.king[0].file, -2), self.king[0].rank))
+        return currentPossibleMoves
+
     def get_name(self):
         """ This is the name you send to the server so your AI will control the
         player named this string.
@@ -693,183 +830,19 @@ class AI(BaseAI):
         #random_rank = random.randrange(8) + 1
         #random_piece.move(random_file, random_rank)
         currentPossibleMoves = pQueue()
-
-        for i in range(len(self.pawn)): # Check PAWN moves
-            if (not self.pawn[i].captured): # If not captured
-                if (not self.pawn[i].has_moved): # If hasn't moved from starting position
-                    if (self.valid_move(self.pawn[i], self.pawn[i].file, self.pawn[i].rank + 2*self.color)):
-                        currentPossibleMoves.put(*self.create_move(self.pawn[i], i, self.pawn[i].file, self.pawn[i].rank + 2*self.color))
-                if (self.valid_move(self.pawn[i], self.pawn[i].file, self.pawn[i].rank + 1*self.color)):
-                    currentPossibleMoves.put(*self.create_move(self.pawn[i], i, self.pawn[i].file, self.pawn[i].rank + 1*self.color))
-                if (not self.pawn[i].file == "h" and self.valid_move(self.pawn[i], self.add_file(self.pawn[i].file, 1), self.pawn[i].rank + 1*self.color)):
-                    currentPossibleMoves.put(*self.create_move(self.pawn[i], i, self.add_file(self.pawn[i].file, 1), self.pawn[i].rank + 1*self.color))
-                if (not self.pawn[i].file == "a" and self.valid_move(self.pawn[i], self.add_file(self.pawn[i].file, -1), self.pawn[i].rank + 1*self.color)):
-                    currentPossibleMoves.put(*self.create_move(self.pawn[i], i, self.add_file(self.pawn[i].file, -1), self.pawn[i].rank + 1*self.color))
-        for i in range(len(self.knight)): # Check KNIGHT moves
-            if (not self.knight[i].captured): # If not captured
-                if (not self.knight[i].file == "h" and self.knight[i].rank > 2 and
-                    self.valid_move(self.knight[i], self.add_file(self.knight[i].file, 1), self.knight[i].rank - 2)):
-                    currentPossibleMoves.put(*self.create_move(self.knight[i], i, self.add_file(self.knight[i].file, 1), self.knight[i].rank - 2))
-                if (not self.knight[i].file == "a" and self.knight[i].rank > 2 and
-                    self.valid_move(self.knight[i], self.add_file(self.knight[i].file, -1), self.knight[i].rank - 2)):
-                    currentPossibleMoves.put(*self.create_move(self.knight[i], i, self.add_file(self.knight[i].file, -1), self.knight[i].rank - 2))
-                if (not self.knight[i].file == "a" and not self.knight[i].file == "b" and self.knight[i].rank > 1 and
-                    self.valid_move(self.knight[i], self.add_file(self.knight[i].file, -2), self.knight[i].rank - 1)):
-                    currentPossibleMoves.put(*self.create_move(self.knight[i], i, self.add_file(self.knight[i].file, -2), self.knight[i].rank - 1))
-                if (not self.knight[i].file == "g" and not self.knight[i].file == "h" and self.knight[i].rank > 1 and
-                    self.valid_move(self.knight[i], self.add_file(self.knight[i].file, 2), self.knight[i].rank - 1)):
-                    currentPossibleMoves.put(*self.create_move(self.knight[i], i, self.add_file(self.knight[i].file, 2), self.knight[i].rank - 1))
-                if (not self.knight[i].file == "h" and self.knight[i].rank < 7 and
-                    self.valid_move(self.knight[i], self.add_file(self.knight[i].file, 1), self.knight[i].rank + 2)):
-                    currentPossibleMoves.put(*self.create_move(self.knight[i], i, self.add_file(self.knight[i].file, 1), self.knight[i].rank + 2))
-                if (not self.knight[i].file == "a" and self.knight[i].rank < 7 and
-                    self.valid_move(self.knight[i], self.add_file(self.knight[i].file, -1), self.knight[i].rank + 2)):
-                    currentPossibleMoves.put(*self.create_move(self.knight[i], i, self.add_file(self.knight[i].file, -1), self.knight[i].rank + 2))
-                if (not self.knight[i].file == "a" and not self.knight[i].file == "b" and self.knight[i].rank <= 8 and	
-                    self.valid_move(self.knight[i], self.add_file(self.knight[i].file, -2), self.knight[i].rank + 1)):
-                    currentPossibleMoves.put(*self.create_move(self.knight[i], i, self.add_file(self.knight[i].file, -2), self.knight[i].rank + 1))
-                if (not self.knight[i].file == "g" and not self.knight[i].file == "h" and self.knight[i].rank <= 8 and
-                    self.valid_move(self.knight[i], self.add_file(self.knight[i].file, 2), self.knight[i].rank + 1)):
-                    currentPossibleMoves.put(*self.create_move(self.knight[i], i, self.add_file(self.knight[i].file, 2), self.knight[i].rank + 1))
-        for i in range(len(self.bishop)): # Check BISHOP moves
-            if (not self.bishop[i].captured): # If not captured
-                for k in range(8):
-                    if (self.fileToInt(self.bishop[i].file) + k < 8 and self.bishop[i].rank - k >= 0): # Bottom Right move
-                        if (self.valid_move(self.bishop[i], self.add_file(self.bishop[i].file, k), self.bishop[i].rank - k)):
-                            currentPossibleMoves.put(*self.create_move(self.bishop[i], i, self.add_file(self.bishop[i].file, k), self.bishop[i].rank - k))
-                    if (self.fileToInt(self.bishop[i].file) - k >= 0 and self.bishop[i].rank - k >= 0): # Bottom Left move
-                        if (self.valid_move(self.bishop[i], self.add_file(self.bishop[i].file, -k), self.bishop[i].rank - k)):
-                            currentPossibleMoves.put(*self.create_move(self.bishop[i], i, self.add_file(self.bishop[i].file, -k), self.bishop[i].rank - k))
-                    if (self.fileToInt(self.bishop[i].file) - k >= 0 and self.bishop[i].rank + k <= 8): # Top Left move
-                        if (self.valid_move(self.bishop[i], self.add_file(self.bishop[i].file, -k), self.bishop[i].rank + k)):
-                            currentPossibleMoves.put(*self.create_move(self.bishop[i], i, self.add_file(self.bishop[i].file, -k), self.bishop[i].rank + k))
-                    if (self.fileToInt(self.bishop[i].file) + k < 8 and self.bishop[i].rank + k <= 8): # Top Right move
-                        if (self.valid_move(self.bishop[i], self.add_file(self.bishop[i].file, k), self.bishop[i].rank + k)):
-                            currentPossibleMoves.put(*self.create_move(self.bishop[i], i, self.add_file(self.bishop[i].file, k), self.bishop[i].rank + k))
-        for i in range(len(self.rook)): # Check ROOK moves
-            if (not self.rook[i].captured): # If not captured
-                for k in range(8):
-                    if (self.fileToInt(self.rook[i].file) + k < 8): # Right move
-                        if (self.valid_move(self.rook[i], self.add_file(self.rook[i].file, k), self.rook[i].rank)):
-                            currentPossibleMoves.put(*self.create_move(self.rook[i], i, self.add_file(self.rook[i].file, k), self.rook[i].rank))
-                    if (self.fileToInt(self.rook[i].file) + k >= 0): # Left move
-                        if (self.valid_move(self.rook[i], self.add_file(self.rook[i].file, -k), self.rook[i].rank)):
-                            currentPossibleMoves.put(*self.create_move(self.rook[i], i, self.add_file(self.rook[i].file, -k), self.rook[i].rank))
-                    if (self.rook[i].rank + k <= 8): # Upwards move
-                        if (self.valid_move(self.rook[i], self.rook[i].file, self.rook[i].rank + k)):
-                            currentPossibleMoves.put(*self.create_move(self.rook[i], i, self.rook[i].file, self.rook[i].rank + k))
-                    if (self.rook[i].rank - k >= 0): # Downwards move
-                        #print("Rook Down?")
-                        if (self.valid_move(self.rook[i], self.rook[i].file, self.rook[i].rank - k)):
-                            currentPossibleMoves.put(*self.create_move(self.rook[i], i, self.rook[i].file, self.rook[i].rank - k))
-        for i in range(len(self.queen)): # Check QUEEN moves
-            if (not self.queen[i].captured): # If not captured
-                for k in range(8):
-                    if (self.fileToInt(self.queen[i].file) + k < 8 and self.queen[i].rank - k >= 0): # Bottom Right move
-                        if (self.valid_move(self.queen[i], self.add_file(self.queen[i].file, k), self.queen[i].rank - k)):
-                            currentPossibleMoves.put(*self.create_move(self.queen[i], i, self.add_file(self.queen[i].file, k), self.queen[i].rank - k))
-                    if (self.fileToInt(self.queen[i].file) - k >= 0 and self.queen[i].rank - k >= 0): # Bottom Left move
-                        if (self.valid_move(self.queen[i], self.add_file(self.queen[i].file, -k), self.queen[i].rank - k)):
-                            currentPossibleMoves.put(*self.create_move(self.queen[i], i, self.add_file(self.queen[i].file, -k), self.queen[i].rank - k))
-                    if (self.fileToInt(self.queen[i].file) - k >= 0 and self.queen[i].rank + k <= 8): # Top Left move
-                        if (self.valid_move(self.queen[i], self.add_file(self.queen[i].file, -k), self.queen[i].rank + k)):
-                            currentPossibleMoves.put(*self.create_move(self.queen[i], i, self.add_file(self.queen[i].file, -k), self.queen[i].rank + k))
-                    if (self.fileToInt(self.queen[i].file) + k < 8 and self.queen[i].rank + k <= 8): # Top Right move
-                        if (self.valid_move(self.queen[i], self.add_file(self.queen[i].file, k), self.queen[i].rank + k)):
-                            currentPossibleMoves.put(*self.create_move(self.queen[i], i, self.add_file(self.queen[i].file, k), self.queen[i].rank + k))
-                    if (self.fileToInt(self.queen[i].file) + k < 8): # Right move
-                        if (self.valid_move(self.queen[i], self.add_file(self.queen[i].file, k), self.queen[i].rank)):
-                            currentPossibleMoves.put(*self.create_move(self.queen[i], i, self.add_file(self.queen[i].file, k), self.queen[i].rank))
-                    if (self.fileToInt(self.queen[i].file) + k >= 0): # Left move
-                        if (self.valid_move(self.queen[i], self.add_file(self.queen[i].file, -k), self.queen[i].rank)):
-                            currentPossibleMoves.put(*self.create_move(self.queen[i], i, self.add_file(self.queen[i].file, -k), self.queen[i].rank))
-                    if (self.queen[i].rank + k <= 8): # Upwards move
-                        if (self.valid_move(self.queen[i], self.queen[i].file, self.queen[i].rank + k)):
-                            currentPossibleMoves.put(*self.create_move(self.queen[i], i, self.queen[i].file, self.queen[i].rank + k))
-                    if (self.queen[i].rank - k >= 0): # Downwards move
-                        if (self.valid_move(self.queen[i], self.queen[i].file, self.queen[i].rank - k)):
-                            currentPossibleMoves.put(*self.create_move(self.queen[i], i, self.queen[i].file, self.queen[i].rank - k))
-        for i in range(len(self.king)): # Check KING moves
-            if (not self.king[0].captured): # If not captured
-                if (self.fileToInt(self.king[0].file) + 1 < 8 and self.king[0].rank - 1 >= 0): # Bottom Right move
-                    if (self.valid_move(self.king[0], self.add_file(self.king[0].file, 1), self.king[0].rank - 1)):
-                        currentPossibleMoves.put(*self.create_move(self.king[0], 0, self.add_file(self.king[0].file, 1), self.king[0].rank - 1))
-                if (self.fileToInt(self.king[0].file) - 1 >= 0 and self.king[0].rank - 1 >= 0): # Bottom Left move
-                    if (self.valid_move(self.king[0], self.add_file(self.king[0].file, -1), self.king[0].rank - 1)):
-                        currentPossibleMoves.put(*self.create_move(self.king[0], 0, self.add_file(self.king[0].file, -1), self.king[0].rank - 1))
-                if (self.fileToInt(self.king[0].file) - 1 >= 0 and self.king[0].rank + 1 <= 8): # Top Left move
-                    if (self.valid_move(self.king[0], self.add_file(self.king[0].file, -1), self.king[0].rank + 1)):
-                        currentPossibleMoves.put(*self.create_move(self.king[0], 0, self.add_file(self.king[0].file, -1), self.king[0].rank + 1))
-                if (self.fileToInt(self.king[0].file) + 1 < 8 and self.king[0].rank + 1 <= 8): # Top Right move
-                    if (self.valid_move(self.king[0], self.add_file(self.king[0].file, 1), self.king[0].rank + 1)):
-                        currentPossibleMoves.put(*self.create_move(self.king[0], 0, self.add_file(self.king[0].file, 1), self.king[0].rank + 1))
-                if (self.fileToInt(self.king[0].file) + 1 < 8): # Right move
-                    if (self.valid_move(self.king[0], self.add_file(self.king[0].file, 1), self.king[0].rank)):
-                        currentPossibleMoves.put(*self.create_move(self.king[0], 0, self.add_file(self.king[0].file, 1), self.king[0].rank))
-                if (self.fileToInt(self.king[0].file) - 1 >= 0): # Left move
-                    if (self.valid_move(self.king[0], self.add_file(self.king[0].file, -1), self.king[0].rank)):
-                        currentPossibleMoves.put(*self.create_move(self.king[0], 0, self.add_file(self.king[0].file, -1), self.king[0].rank))
-                if (self.king[0].rank + 1 <= 8): # Upwards move
-                    if (self.valid_move(self.king[0], self.king[0].file, self.king[0].rank + 1)):
-                        currentPossibleMoves.put(*self.create_move(self.king[0], 0, self.king[0].file, self.king[0].rank + 1))
-                if (self.king[0].rank - 1 >= 0): # Downwards move
-                    if (self.valid_move(self.king[0], self.king[0].file, self.king[0].rank - 1)):
-                        currentPossibleMoves.put(*self.create_move(self.king[0], 0, self.king[0].file, self.king[0].rank - 1))
-                # CASTLING
-                if (not self.king[0].has_moved):
-                    for i in range(0, len(self.rook)):
-                        if (not self.rook[i].has_moved and not self.rook[i].captured):
-                            if (self.fileToInt(self.rook[i].file) > self.fileToInt(self.king[0].file)):
-                                if (self.valid_move(self.king[0], self.add_file(self.king[0].file, 2), self.king[0].rank)):
-                                    currentPossibleMoves.put(*self.create_move(self.king[0], 0, self.add_file(self.king[0].file, 2), self.king[0].rank))
-                            elif (self.fileToInt(self.rook[i].file) < self.fileToInt(self.king[0].file)):
-                                if (self.valid_move(self.king[0], self.add_file(self.king[0].file, -2), self.king[0].rank)):
-                                    currentPossibleMoves.put(*self.create_move(self.king[0], 0, self.add_file(self.king[0].file, -2), self.king[0].rank))
-        #shuffle(currentPossibleMoves)
+        currentPossibleMoves = self.getMyMoves()
         
         if (self.player.in_check):
             print("In Check...")
-            
-        #check = True
-        #numMoves = len(currentPossibleMoves)
-        #while (check):
-        #    check = self.find_check_piece(currentPossibleMoves[randomNum])
-        #    if (check):
-        #        #print("Deleting move...", currentPossibleMoves[randomNum].actionObj.type, currentPossibleMoves[randomNum].newFile, currentPossibleMoves[randomNum].newRank)
-        #        del currentPossibleMoves[randomNum]
-        #        randomNum = random.randrange(len(currentPossibleMoves))
-        #numMoves = len(currentPossibleMoves)
-        #k = 0
-        #while (k < numMoves):
-        #    if (self.find_check_piece(currentPossibleMoves[k])):
-        #        #print("Deleting move...", currentPossibleMoves[k].actionObj.type, currentPossibleMoves[k].newFile, currentPossibleMoves[k].newRank)
-        #        del currentPossibleMoves[k]
-        #        numMoves -= 1
-        #    else:
-        #        k += 1
 
-        #randomNum = random.randrange(len(currentPossibleMoves))
-        #randomMove = currentPossibleMoves[randomNum]
         bestMove, bestPriority = currentPossibleMoves.pop_back()
         while (self.find_check_piece(bestMove)):
             bestMove, bestPriority = currentPossibleMoves.pop_back()
 
+        #promotion = getPromotionType() # DEFINE THIS!
         _move = bestMove.actionObj.move(bestMove.newFile, bestMove.newRank, self.piece_types[random.randrange(len(self.piece_types))])
         self.myMoves.append(bestMove)
         print("Moving", bestMove.actionObj.type, "#" + str(bestMove.actionObj.id), "to '" + str(bestMove.newFile) + str(bestMove.newRank) + "', with priority", bestPriority)
-
-        #print("Other Possible moves for", str(randomMove.actionObj.type) + ":")
-
-        #numExtraMoves = 0
-        #listNum = 1
-        #for i in range(len(currentPossibleMoves)):
-        #    if (not i == randomNum):
-        #        if (currentPossibleMoves[i].actionObj.type == randomMove.actionObj.type):
-        #            print("\t" + str(listNum) + ".", str(currentPossibleMoves[i].newFile) + str(currentPossibleMoves[i].newRank))
-        #            listNum += 1
-        #            numExtraMoves += 1
-        #if (numExtraMoves == 0):
-        #    print("\tNo other valid moves!")
 
         if (not _move.promotion == ""):
             if (_move.promotion == "Bishop"):
