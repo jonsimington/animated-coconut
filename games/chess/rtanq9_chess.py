@@ -1,4 +1,5 @@
 # Point class to store a point
+import random
 class point:
     def __init__(self, xx, yy):
         self.x = xx
@@ -46,13 +47,14 @@ class MAP:
 # - an array of Alligators, an array of Turtles, and an array of Trees
 # - with optional parameters of Path-Cost, and Parent State
 class move:
-    def __init__(self, Board = None, ActObj = None, ActObjNum = 0, newF = 0, newR = 0):
+    def __init__(self, Board = None, ActObj = None, ActObjNum = 0, newF = 0, newR = 0, heuristicV = 0):
         self.board = Board
         #self.pathCost = deepcopy(pState.pathCost)
         self.actionObj = ActObj
         self.actionObjNum = ActObjNum
         self.newFile = newF
         self.newRank = newR
+        self.weight = heuristicV
     #################################
     # __eq__: allows a state to be using in a comparison operator
     def __eq__(self, otherState):
@@ -81,18 +83,38 @@ class pQueue:
     # - items with the same weight
     def put(self, item, weight = 0):
         putOn = False
+        startRange = 0
+        stopRange = len(self.queue)
         for i in range(len(self.queue)):
+            #print("put: ", self.queue[i].priority, weight, self.queue[i].priority > weight)
+            if (self.queue[i].priority <= weight):
+                startRange = i+1
             if (self.queue[i].priority > weight):
-                self.queue.insert(i, pQueueObject(item, weight))
-                putOn = True
+                stopRange = i
+                if (startRange == i):
+                    putOn = True
+                    self.queue.insert(i, pQueueObject(item, weight))
                 break
-        if (not putOn):
-            self.queue.append(pQueueObject(item, weight))
+
+        if (not putOn and startRange < stopRange):
+            print("RANDOM!")
+            self.queue.insert(random.randrange(startRange, stopRange), pQueueObject(item, weight))
+        elif (not putOn):
+            self.queue.insert(startRange, pQueueObject(item, weight))
+        #else:
+        #    self.queue.append(pQueueObject(item, weight))
     #pop: Removes the top item of the queue, and returns it. Does not return the weight
     def pop(self):
         if (len(self.queue) > 0):
             top = self.queue.pop(0)
-            return top.item
+            return top.item, top.priority
+        else:
+            print("Empty queue!")
+            return False
+    def pop_back(self):
+        if (len(self.queue) > 0):
+            back = self.queue.pop()
+            return back.item, back.priority
         else:
             print("Empty queue!")
             return False
