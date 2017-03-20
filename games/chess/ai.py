@@ -264,7 +264,7 @@ class AI(BaseAI):
             return False
 
         #print("---", piece.id)
-        if (not piece.actual_piece[0].captured):
+        if (not piece.actual_piece.captured):
             if (type == "Pawn"):
                 if (piece.file == newFile and newLocation.y >= 0 and newLocation.y < 8): # Moving Forward
                     if (y_range == 3 and not ((oldLocation.x == 1 and self.color == 1) or (oldLocation.x == 6 and self.color == -1))):
@@ -404,11 +404,13 @@ class AI(BaseAI):
         else:
             return files[_f + amount]
 
-    def create_move(self, actionObj, actionNum, newFile, newRank, _chessBoard):
+    def create_move(self, actionObj, actionNum, newFile, newRank, _chessBoard, MinimaxTurn):
         enemyPoints = 0
         myPoints = 0
 
-        newBoard = chessBoard(_chessBoard)
+        currentMove = move(actionObj, actionNum, newFile, newRank)
+        newBoard = chessBoard(_chessBoard, currentMove, False if MinimaxTurn > 0 else True)
+
         oldLocation = point(self.fileToInt(actionObj.file), actionObj.rank - 1)
         newLocation = point(self.fileToInt(newFile), newRank - 1)
         capturedPiece = newBoard.board.location[newLocation.x][newLocation.y]
@@ -460,37 +462,26 @@ class AI(BaseAI):
 
         if (actionObj.type == "Rook" or actionObj.type == "Queen"):
             if (newLocation.y+1 == newBoard.enemyKing[0].rank or self.intToFile(newLocation.x) == newBoard.enemyKing[0].file):
-                print(actionObj.type, str(self.intToFile(oldLocation.x)) + str(oldLocation.y+1), "->", str(self.intToFile(newLocation.x)) + str(newLocation.y+1), "in same rank/file as enemy king", ":", newBoard.enemyKing[0].rank, newBoard.enemyKing[0].file)
                 myPoints += 300
         if (actionObj.type == "Bishop" or actionObj.type == "Queen"):
-            #print(newLocation.x+1, self.enemyKing[0].rank)
             for i in range(8):
                 if (newLocation.x+i < 8 and newLocation.y+i < 8):
-                    #print(i, actionObj.type, str(self.intToFile(oldLocation.x)) + str(oldLocation.y+1), "->", str(self.intToFile(newLocation.x)) + str(newLocation.y+1), "  ", newLocation.y+1+i, self.enemyKing[0].rank, self.intToFile(newLocation.x+i), self.enemyKing[0].file)
                     if ((newLocation.y+1+i == newBoard.enemyKing[0].rank) and (self.intToFile(newLocation.x+i) == newBoard.enemyKing[0].file)):
-                        print(actionObj.type, str(self.intToFile(oldLocation.x)) + str(oldLocation.y+1), "->", str(self.intToFile(newLocation.x)) + str(newLocation.y+1), "possible LOS of enemy king", ":", newBoard.enemyKing[0].rank, newBoard.enemyKing[0].file)
                         myPoints += 100 + 250 if actionObj.type == "Bishop" else 0
                 if (newLocation.x+i < 8 and newLocation.y-i >= 0):
-                    #print(i, actionObj.type, str(self.intToFile(oldLocation.x)) + str(oldLocation.y+1), "->", str(self.intToFile(newLocation.x)) + str(newLocation.y+1), "  ", newLocation.y+1-i, self.enemyKing[0].rank, self.intToFile(newLocation.x+i), self.enemyKing[0].file)
                     if ((newLocation.y+1-i == newBoard.enemyKing[0].rank) and (self.intToFile(newLocation.x+i) == newBoard.enemyKing[0].file)):
-                        print(actionObj.type, str(self.intToFile(oldLocation.x)) + str(oldLocation.y+1), "->", str(self.intToFile(newLocation.x)) + str(newLocation.y+1), "possible LOS of enemy king", ":", newBoard.enemyKing[0].rank, newBoard.enemyKing[0].file)
                         myPoints += 200 + 250 if actionObj.type == "Bishop" else 0
                 if (newLocation.x-i >= 0 and newLocation.y-i >= 0):
-                    #print(i, actionObj.type, str(self.intToFile(oldLocation.x)) + str(oldLocation.y+1), "->", str(self.intToFile(newLocation.x)) + str(newLocation.y+1), "  ", newLocation.y+1-i, self.enemyKing[0].rank, self.intToFile(newLocation.x-i), self.enemyKing[0].file)
                     if ((newLocation.y+1-i == newBoard.enemyKing[0].rank) and (self.intToFile(newLocation.x-i) == newBoard.enemyKing[0].file)):
-                        print(actionObj.type, str(self.intToFile(oldLocation.x)) + str(oldLocation.y+1), "->", str(self.intToFile(newLocation.x)) + str(newLocation.y+1), "possible LOS of enemy king", ":", newBoard.enemyKing[0].rank, newBoard.enemyKing[0].file)
                         myPoints += 200 + 250 if actionObj.type == "Bishop" else 0
                 if (newLocation.x-i >= 0 and newLocation.y+i < 8):
-                    #print(i, actionObj.type, str(self.intToFile(oldLocation.x)) + str(oldLocation.y+1), "->", str(self.intToFile(newLocation.x)) + str(newLocation.y+1), "  ", newLocation.y+1+i, self.enemyKing[0].rank, self.intToFile(newLocation.x-i), self.enemyKing[0].file)
                     if ((newLocation.y+1+i == newBoard.enemyKing[0].rank) and (self.intToFile(newLocation.x-i) == newBoard.enemyKing[0].file)):
-                        print(actionObj.type, str(self.intToFile(oldLocation.x)) + str(oldLocation.y+1), "->", str(self.intToFile(newLocation.x)) + str(newLocation.y+1), "possible LOS of enemy king", ":", newBoard.enemyKing[0].rank, newBoard.enemyKing[0].file)
                         myPoints += 200 + 250 if actionObj.type == "Bishop" else 0
 
         heuristicValue = myPoints - enemyPoints
-        #print(heuristicValue)
 
-        newBoard.currentMove = move(actionObj, actionNum, newFile, newRank)
-        return newBoard, heuristicValue
+        
+        return newBoard, heuristicValue*MinimaxTurn
 
     def makeLastMove(self):
         numPieces = len(self.game.pieces)
@@ -529,180 +520,327 @@ class AI(BaseAI):
                 elif (self.game.pieces[i].type == "King"):
                     newBoard.board.location[self.fileToInt(self.game.pieces[i].file)][self.game.pieces[i].rank-1] = "K"
         #_chessBoard.board.location.reverse()
-        #print(_chessBoard.board.location)
 
-    def getMyMoves(self, _chessBoard):
-        depthLimit = 1
+    def getMoves(self, _chessBoard, currentDepth, depthLimit, MinimaxTurn):
         currentPossibleMoves = pQueue()
-        for i in range(len(_chessBoard.pawn)): # Check PAWN moves
-            if (not _chessBoard.pawn[i].actual_piece[0].captured): # If not captured
-                if (not _chessBoard.pawn[i].actual_piece[0].has_moved): # If hasn't moved from starting position
-                    if (self.valid_move(_chessBoard.pawn[i], _chessBoard.pawn[i].file, _chessBoard.pawn[i].rank + 2*self.color, _chessBoard)):
-                        currentPossibleMoves.put(*self.create_move(_chessBoard.pawn[i], i, _chessBoard.pawn[i].file, _chessBoard.pawn[i].rank + 2*self.color, _chessBoard))
-                        #_chessBoard.pawn[i].move(_chessBoard.pawn[i].file, _chessBoard.pawn[i].rank + 2*self.color)
-                if (self.valid_move(_chessBoard.pawn[i], _chessBoard.pawn[i].file, _chessBoard.pawn[i].rank + 1*self.color, _chessBoard)):
-                    currentPossibleMoves.put(*self.create_move(_chessBoard.pawn[i], i, _chessBoard.pawn[i].file, _chessBoard.pawn[i].rank + 1*self.color, _chessBoard))
-                    #_chessBoard.pawn[i].move(_chessBoard.pawn[i].file, _chessBoard.pawn[i].rank + 1*self.color)
-                if (not _chessBoard.pawn[i].file == "h" and self.valid_move(_chessBoard.pawn[i], self.add_file(_chessBoard.pawn[i].file, 1), _chessBoard.pawn[i].rank + 1*self.color, _chessBoard)):
-                    currentPossibleMoves.put(*self.create_move(_chessBoard.pawn[i], i, self.add_file(_chessBoard.pawn[i].file, 1), _chessBoard.pawn[i].rank + 1*self.color, _chessBoard))
-                    #_chessBoard.pawn[i].move(self.add_file(_chessBoard.pawn[i].file, 1), _chessBoard.pawn[i].rank + 1*self.color)
-                if (not _chessBoard.pawn[i].file == "a" and self.valid_move(_chessBoard.pawn[i], self.add_file(_chessBoard.pawn[i].file, -1), _chessBoard.pawn[i].rank + 1*self.color, _chessBoard)):
-                    currentPossibleMoves.put(*self.create_move(_chessBoard.pawn[i], i, self.add_file(_chessBoard.pawn[i].file, -1), _chessBoard.pawn[i].rank + 1*self.color, _chessBoard))
-                    #_chessBoard.pawn[i].move(self.add_file(_chessBoard.pawn[i].file, -1), _chessBoard.pawn[i].rank + 1*self.color)
-        for i in range(len(_chessBoard.knight)): # Check KNIGHT moves
-            if (not _chessBoard.knight[i].actual_piece[0].captured): # If not captured
-                if (not _chessBoard.knight[i].file == "h" and _chessBoard.knight[i].rank > 2 and
-                    self.valid_move(_chessBoard.knight[i], self.add_file(_chessBoard.knight[i].file, 1), _chessBoard.knight[i].rank - 2, _chessBoard)):
-                    currentPossibleMoves.put(*self.create_move(_chessBoard.knight[i], i, self.add_file(_chessBoard.knight[i].file, 1), _chessBoard.knight[i].rank - 2, _chessBoard))
-                    #_chessBoard.knight[i].move(self.add_file(_chessBoard.knight[i].file, 1), _chessBoard.knight[i].rank - 2)
-                if (not _chessBoard.knight[i].file == "a" and _chessBoard.knight[i].rank > 2 and
-                    self.valid_move(_chessBoard.knight[i], self.add_file(_chessBoard.knight[i].file, -1), _chessBoard.knight[i].rank - 2, _chessBoard)):
-                    currentPossibleMoves.put(*self.create_move(_chessBoard.knight[i], i, self.add_file(_chessBoard.knight[i].file, -1), _chessBoard.knight[i].rank - 2, _chessBoard))
-                    #_chessBoard.knight[i].move(self.add_file(_chessBoard.knight[i].file, -1), _chessBoard.knight[i].rank - 2)
-                if (not _chessBoard.knight[i].file == "a" and not _chessBoard.knight[i].file == "b" and _chessBoard.knight[i].rank > 1 and
-                    self.valid_move(_chessBoard.knight[i], self.add_file(_chessBoard.knight[i].file, -2), _chessBoard.knight[i].rank - 1, _chessBoard)):
-                    currentPossibleMoves.put(*self.create_move(_chessBoard.knight[i], i, self.add_file(_chessBoard.knight[i].file, -2), _chessBoard.knight[i].rank - 1, _chessBoard))
-                    #_chessBoard.knight[i].move(self.add_file(_chessBoard.knight[i].file, -2), _chessBoard.knight[i].rank - 1)
-                if (not _chessBoard.knight[i].file == "g" and not _chessBoard.knight[i].file == "h" and _chessBoard.knight[i].rank > 1 and
-                    self.valid_move(_chessBoard.knight[i], self.add_file(_chessBoard.knight[i].file, 2), _chessBoard.knight[i].rank - 1, _chessBoard)):
-                    currentPossibleMoves.put(*self.create_move(_chessBoard.knight[i], i, self.add_file(_chessBoard.knight[i].file, 2), _chessBoard.knight[i].rank - 1, _chessBoard))
-                    #_chessBoard.knight[i].move(self.add_file(_chessBoard.knight[i].file, 2), _chessBoard.knight[i].rank - 1)
-                if (not _chessBoard.knight[i].file == "h" and _chessBoard.knight[i].rank < 7 and
-                    self.valid_move(_chessBoard.knight[i], self.add_file(_chessBoard.knight[i].file, 1), _chessBoard.knight[i].rank + 2, _chessBoard)):
-                    currentPossibleMoves.put(*self.create_move(_chessBoard.knight[i], i, self.add_file(_chessBoard.knight[i].file, 1), _chessBoard.knight[i].rank + 2, _chessBoard))
-                    #_chessBoard.knight[i].move(self.add_file(_chessBoard.knight[i].file, 1), _chessBoard.knight[i].rank + 2)
-                if (not _chessBoard.knight[i].file == "a" and _chessBoard.knight[i].rank < 7 and
-                    self.valid_move(_chessBoard.knight[i], self.add_file(_chessBoard.knight[i].file, -1), _chessBoard.knight[i].rank + 2, _chessBoard)):
-                    currentPossibleMoves.put(*self.create_move(_chessBoard.knight[i], i, self.add_file(_chessBoard.knight[i].file, -1), _chessBoard.knight[i].rank + 2, _chessBoard))
-                    #_chessBoard.knight[i].move(self.add_file(_chessBoard.knight[i].file, -1), _chessBoard.knight[i].rank + 2)
-                if (not _chessBoard.knight[i].file == "a" and not _chessBoard.knight[i].file == "b" and _chessBoard.knight[i].rank <= 8 and	
-                    self.valid_move(_chessBoard.knight[i], self.add_file(_chessBoard.knight[i].file, -2), _chessBoard.knight[i].rank + 1, _chessBoard)):
-                    currentPossibleMoves.put(*self.create_move(_chessBoard.knight[i], i, self.add_file(_chessBoard.knight[i].file, -2), _chessBoard.knight[i].rank + 1, _chessBoard))
-                    #_chessBoard.knight[i].move(self.add_file(_chessBoard.knight[i].file, -2), _chessBoard.knight[i].rank + 1)
-                if (not _chessBoard.knight[i].file == "g" and not _chessBoard.knight[i].file == "h" and _chessBoard.knight[i].rank <= 8 and
-                    self.valid_move(_chessBoard.knight[i], self.add_file(_chessBoard.knight[i].file, 2), _chessBoard.knight[i].rank + 1, _chessBoard)):
-                    currentPossibleMoves.put(*self.create_move(_chessBoard.knight[i], i, self.add_file(_chessBoard.knight[i].file, 2), _chessBoard.knight[i].rank + 1, _chessBoard))
-                    #_chessBoard.knight[i].move(self.add_file(_chessBoard.knight[i].file, 2), _chessBoard.knight[i].rank + 1)
-        for i in range(len(_chessBoard.bishop)): # Check BISHOP moves
-            if (not _chessBoard.bishop[i].actual_piece[0].captured): # If not captured
+        for i in range(len(_chessBoard.pawn if MinimaxTurn > 0 else _chessBoard.enemyPawn)): # Check PAWN moves
+            _pawn = _chessBoard.pawn[i] if MinimaxTurn > 0 else _chessBoard.enemyPawn[i]
+            if (not _pawn.actual_piece.captured): # If not captured
+                if (not _pawn.actual_piece.has_moved): # If hasn't moved from starting position
+                    if (self.valid_move(_pawn, _pawn.file, _pawn.rank + 2*self.color, _chessBoard)):
+                        thisMove, h = self.create_move(_pawn, i, _pawn.file, _pawn.rank + 2*self.color, _chessBoard, MinimaxTurn)
+                        if (currentDepth < depthLimit):
+                            h = self.getMoves(thisMove, currentDepth+1, depthLimit, MinimaxTurn*-1)
+                        else:
+                            return h
+                        currentPossibleMoves.put(thisMove, h)
+                if (self.valid_move(_pawn, _pawn.file, _pawn.rank + 1*self.color, _chessBoard)):
+                    thisMove, h = self.create_move(_pawn, i, _pawn.file, _pawn.rank + 1*self.color, _chessBoard, MinimaxTurn)
+                    if (currentDepth < depthLimit):
+                        h = self.getMoves(thisMove, currentDepth+1, depthLimit, MinimaxTurn*-1)
+                    else:
+                        return h
+                    currentPossibleMoves.put(thisMove, h)
+                if (not _pawn.file == "h" and self.valid_move(_pawn, self.add_file(_pawn.file, 1), _pawn.rank + 1*self.color, _chessBoard)):
+                    thisMove, h = self.create_move(_pawn, i, self.add_file(_pawn.file, 1), _pawn.rank + 1*self.color, _chessBoard, MinimaxTurn)
+                    if (currentDepth < depthLimit):
+                        h = self.getMoves(thisMove, currentDepth+1, depthLimit, MinimaxTurn*-1)
+                    else:
+                        return h
+                    currentPossibleMoves.put(thisMove, h)
+                if (not _pawn.file == "a" and self.valid_move(_pawn, self.add_file(_pawn.file, -1), _pawn.rank + 1*self.color, _chessBoard)):
+                    thisMove, h = self.create_move(_pawn, i, self.add_file(_pawn.file, -1), _pawn.rank + 1*self.color, _chessBoard, MinimaxTurn)
+                    if (currentDepth < depthLimit):
+                        h = self.getMoves(thisMove, currentDepth+1, depthLimit, MinimaxTurn*-1)
+                    else:
+                        return h
+                    currentPossibleMoves.put(thisMove, h)
+        for i in range(len(_chessBoard.knight if MinimaxTurn > 0 else _chessBoard.enemyKnight)): # Check KNIGHT moves
+            _knight = _chessBoard.knight[i] if MinimaxTurn > 0 else _chessBoard.enemyKnight[i]
+            if (not _knight.actual_piece.captured): # If not captured
+                if (not _knight.file == "h" and _knight.rank > 2 and self.valid_move(_knight, self.add_file(_knight.file, 1), _knight.rank - 2, _chessBoard)):
+                    thisMove, h = self.create_move(_knight, i, self.add_file(_knight.file, 1), _knight.rank - 2, _chessBoard, MinimaxTurn)
+                    if (currentDepth < depthLimit):
+                        h = self.getMoves(thisMove, currentDepth+1, depthLimit, MinimaxTurn*-1)
+                    else:
+                        return h
+                    currentPossibleMoves.put(thisMove, h)
+                if (not _knight.file == "a" and _knight.rank > 2 and self.valid_move(_knight, self.add_file(_knight.file, -1), _knight.rank - 2, _chessBoard)):
+                    thisMove, h = self.create_move(_knight, i, self.add_file(_knight.file, -1), _knight.rank - 2, _chessBoard, MinimaxTurn)
+                    if (currentDepth < depthLimit):
+                        h = self.getMoves(thisMove, currentDepth+1, depthLimit, MinimaxTurn*-1)
+                    else:
+                        return h
+                    currentPossibleMoves.put(thisMove, h)
+                if (not _knight.file == "a" and not _knight.file == "b" and _knight.rank > 1 and self.valid_move(_knight, self.add_file(_knight.file, -2), _knight.rank - 1, _chessBoard)):
+                    thisMove, h = self.create_move(_knight, i, self.add_file(_knight.file, -2), _knight.rank - 1, _chessBoard, MinimaxTurn)
+                    if (currentDepth < depthLimit):
+                        h = self.getMoves(thisMove, currentDepth+1, depthLimit, MinimaxTurn*-1)
+                    else:
+                        return h
+                    currentPossibleMoves.put(thisMove, h)
+                if (not _knight.file == "g" and not _knight.file == "h" and _knight.rank > 1 and self.valid_move(_knight, self.add_file(_knight.file, 2), _knight.rank - 1, _chessBoard)):
+                    thisMove, h = self.create_move(_knight, i, self.add_file(_knight.file, 2), _knight.rank - 1, _chessBoard, MinimaxTurn)
+                    if (currentDepth < depthLimit):
+                        h = self.getMoves(thisMove, currentDepth+1, depthLimit, MinimaxTurn*-1)
+                    else:
+                        return h
+                    currentPossibleMoves.put(thisMove, h)
+                if (not _knight.file == "h" and _knight.rank < 7 and self.valid_move(_knight, self.add_file(_knight.file, 1), _knight.rank + 2, _chessBoard)):
+                    thisMove, h = self.create_move(_knight, i, self.add_file(_knight.file, 1), _knight.rank + 2, _chessBoard, MinimaxTurn)
+                    if (currentDepth < depthLimit):
+                        h = self.getMoves(thisMove, currentDepth+1, depthLimit, MinimaxTurn*-1)
+                    else:
+                        return h
+                    currentPossibleMoves.put(thisMove, h)
+                if (not _knight.file == "a" and _knight.rank < 7 and self.valid_move(_knight, self.add_file(_knight.file, -1), _knight.rank + 2, _chessBoard)):
+                    thisMove, h = self.create_move(_knight, i, self.add_file(_knight.file, -1), _knight.rank + 2, _chessBoard, MinimaxTurn)
+                    if (currentDepth < depthLimit):
+                        h = self.getMoves(thisMove, currentDepth+1, depthLimit, MinimaxTurn*-1)
+                    else:
+                        return h
+                    currentPossibleMoves.put(thisMove, h)
+                if (not _knight.file == "a" and not _knight.file == "b" and _knight.rank <= 8 and self.valid_move(_knight, self.add_file(_knight.file, -2), _knight.rank + 1, _chessBoard)):
+                    thisMove, h = self.create_move(_knight, i, self.add_file(_knight.file, -2), _knight.rank + 1, _chessBoard, MinimaxTurn)
+                    if (currentDepth < depthLimit):
+                        h = self.getMoves(thisMove, currentDepth+1, depthLimit, MinimaxTurn*-1)
+                    else:
+                        return h
+                    currentPossibleMoves.put(thisMove, h)
+                if (not _knight.file == "g" and not _knight.file == "h" and _knight.rank <= 8 and self.valid_move(_knight, self.add_file(_knight.file, 2), _knight.rank + 1, _chessBoard)):
+                    thisMove, h = self.create_move(_knight, i, self.add_file(_knight.file, 2), _knight.rank + 1, _chessBoard, MinimaxTurn)
+                    if (currentDepth < depthLimit):
+                        h = self.getMoves(thisMove, currentDepth+1, depthLimit, MinimaxTurn*-1)
+                    else:
+                        return h
+                    currentPossibleMoves.put(thisMove, h)
+        for i in range(len(_chessBoard.bishop if MinimaxTurn > 0 else _chessBoard.enemyBishop)): # Check BISHOP moves
+            _bishop = _chessBoard.bishop[i] if MinimaxTurn > 0 else _chessBoard.enemyBishop[i]
+            if (not _bishop.actual_piece.captured): # If not captured
                 for k in range(8):
-                    if (self.fileToInt(_chessBoard.bishop[i].file) + k < 8 and _chessBoard.bishop[i].rank - k >= 0): # Bottom Right move
-                        if (self.valid_move(_chessBoard.bishop[i], self.add_file(_chessBoard.bishop[i].file, k), _chessBoard.bishop[i].rank - k, _chessBoard)):
-                            currentPossibleMoves.put(*self.create_move(_chessBoard.bishop[i], i, self.add_file(_chessBoard.bishop[i].file, k), _chessBoard.bishop[i].rank - k, _chessBoard))
-                            #_chessBoard.bishop[i].move(self.add_file(_chessBoard.bishop[i].file, k), _chessBoard.bishop[i].rank - k)
-                    if (self.fileToInt(_chessBoard.bishop[i].file) - k >= 0 and _chessBoard.bishop[i].rank - k >= 0): # Bottom Left move
-                        if (self.valid_move(_chessBoard.bishop[i], self.add_file(_chessBoard.bishop[i].file, -k), _chessBoard.bishop[i].rank - k, _chessBoard)):
-                            currentPossibleMoves.put(*self.create_move(_chessBoard.bishop[i], i, self.add_file(_chessBoard.bishop[i].file, -k), _chessBoard.bishop[i].rank - k, _chessBoard))
-                            #_chessBoard.bishop[i].move(self.add_file(_chessBoard.bishop[i].file, -k), _chessBoard.bishop[i].rank - k)
-                    if (self.fileToInt(_chessBoard.bishop[i].file) - k >= 0 and _chessBoard.bishop[i].rank + k <= 8): # Top Left move
-                        if (self.valid_move(_chessBoard.bishop[i], self.add_file(_chessBoard.bishop[i].file, -k), _chessBoard.bishop[i].rank + k, _chessBoard)):
-                            currentPossibleMoves.put(*self.create_move(_chessBoard.bishop[i], i, self.add_file(_chessBoard.bishop[i].file, -k), _chessBoard.bishop[i].rank + k, _chessBoard))
-                            #_chessBoard.bishop[i].move(self.add_file(_chessBoard.bishop[i].file, -k), _chessBoard.bishop[i].rank + k)
-                    if (self.fileToInt(_chessBoard.bishop[i].file) + k < 8 and _chessBoard.bishop[i].rank + k <= 8): # Top Right move
-                        if (self.valid_move(_chessBoard.bishop[i], self.add_file(_chessBoard.bishop[i].file, k), _chessBoard.bishop[i].rank + k, _chessBoard)):
-                            currentPossibleMoves.put(*self.create_move(_chessBoard.bishop[i], i, self.add_file(_chessBoard.bishop[i].file, k), _chessBoard.bishop[i].rank + k, _chessBoard))
-                            #_chessBoard.bishop[i].move(self.add_file(_chessBoard.bishop[i].file, -k), _chessBoard.bishop[i].rank + k)
-        for i in range(len(_chessBoard.rook)): # Check ROOK moves
-            if (not _chessBoard.rook[i].actual_piece[0].captured): # If not captured
+                    if (self.fileToInt(_bishop.file) + k < 8 and _bishop.rank - k >= 0): # Bottom Right move
+                        if (self.valid_move(_bishop, self.add_file(_bishop.file, k), _bishop.rank - k, _chessBoard)):
+                            thisMove, h = self.create_move(_bishop, i, self.add_file(_bishop.file, k), _bishop.rank - k, _chessBoard, MinimaxTurn)
+                            if (currentDepth < depthLimit):
+                                h = self.getMoves(thisMove, currentDepth+1, depthLimit, MinimaxTurn*-1)
+                            else:
+                                return h
+                            currentPossibleMoves.put(thisMove, h)
+                    if (self.fileToInt(_bishop.file) - k >= 0 and _bishop.rank - k >= 0): # Bottom Left move
+                        if (self.valid_move(_bishop, self.add_file(_bishop.file, -k), _bishop.rank - k, _chessBoard)):
+                            thisMove, h = self.create_move(_bishop, i, self.add_file(_bishop.file, -k), _bishop.rank - k, _chessBoard, MinimaxTurn)
+                            if (currentDepth < depthLimit):
+                                h = self.getMoves(thisMove, currentDepth+1, depthLimit, MinimaxTurn*-1)
+                            else:
+                                return h
+                            currentPossibleMoves.put(thisMove, h)
+                    if (self.fileToInt(_bishop.file) - k >= 0 and _bishop.rank + k <= 8): # Top Left move
+                        if (self.valid_move(_bishop, self.add_file(_bishop.file, -k), _bishop.rank + k, _chessBoard)):
+                            thisMove, h = self.create_move(_bishop, i, self.add_file(_bishop.file, -k), _bishop.rank + k, _chessBoard, MinimaxTurn)
+                            if (currentDepth < depthLimit):
+                                h = self.getMoves(thisMove, currentDepth+1, depthLimit, MinimaxTurn*-1)
+                            else:
+                                return h
+                            currentPossibleMoves.put(thisMove, h)
+                    if (self.fileToInt(_bishop.file) + k < 8 and _bishop.rank + k <= 8): # Top Right move
+                        if (self.valid_move(_bishop, self.add_file(_bishop.file, k), _bishop.rank + k, _chessBoard)):
+                            thisMove, h = self.create_move(_bishop, i, self.add_file(_bishop.file, k), _bishop.rank + k, _chessBoard, MinimaxTurn)
+                            if (currentDepth < depthLimit):
+                                h = self.getMoves(thisMove, currentDepth+1, depthLimit, MinimaxTurn*-1)
+                            else:
+                                return h
+                            currentPossibleMoves.put(thisMove, h)
+        for i in range(len(_chessBoard.rook if MinimaxTurn > 0 else _chessBoard.enemyRook)): # Check ROOK moves
+            _rook = _chessBoard.rook[i] if MinimaxTurn > 0 else _chessBoard.enemyRook[i]
+            if (not _rook.actual_piece.captured): # If not captured
                 for k in range(8):
-                    if (self.fileToInt(_chessBoard.rook[i].file) + k < 8): # Right move
-                        if (self.valid_move(_chessBoard.rook[i], self.add_file(_chessBoard.rook[i].file, k), _chessBoard.rook[i].rank, _chessBoard)):
-                            currentPossibleMoves.put(*self.create_move(_chessBoard.rook[i], i, self.add_file(_chessBoard.rook[i].file, k), _chessBoard.rook[i].rank, _chessBoard))
-                            #_chessBoard.rook[i].move(self.add_file(_chessBoard.rook[i].file, k), _chessBoard.rook[i].rank)
-                    if (self.fileToInt(_chessBoard.rook[i].file) + k >= 0): # Left move
-                        if (self.valid_move(_chessBoard.rook[i], self.add_file(_chessBoard.rook[i].file, -k), _chessBoard.rook[i].rank, _chessBoard)):
-                            currentPossibleMoves.put(*self.create_move(_chessBoard.rook[i], i, self.add_file(_chessBoard.rook[i].file, -k), _chessBoard.rook[i].rank, _chessBoard))
-                            #_chessBoard.rook[i].move(self.add_file(_chessBoard.rook[i].file, -k), _chessBoard.rook[i].rank)
-                    if (_chessBoard.rook[i].rank + k <= 8): # Upwards move
-                        if (self.valid_move(_chessBoard.rook[i], _chessBoard.rook[i].file, _chessBoard.rook[i].rank + k, _chessBoard)):
-                            currentPossibleMoves.put(*self.create_move(_chessBoard.rook[i], i, _chessBoard.rook[i].file, _chessBoard.rook[i].rank + k, _chessBoard))
-                            #_chessBoard.rook[i].move(_chessBoard.rook[i].file, _chessBoard.rook[i].rank + k)
-                    if (_chessBoard.rook[i].rank - k >= 0): # Downwards move
-                        #print("Rook Down?")
-                        if (self.valid_move(_chessBoard.rook[i], _chessBoard.rook[i].file, _chessBoard.rook[i].rank - k, _chessBoard)):
-                            currentPossibleMoves.put(*self.create_move(_chessBoard.rook[i], i, _chessBoard.rook[i].file, _chessBoard.rook[i].rank - k, _chessBoard))
-                            #_chessBoard.rook[i].move(_chessBoard.rook[i].file, _chessBoard.rook[i].rank - k)
-        for i in range(len(_chessBoard.queen)): # Check QUEEN moves
-            if (not _chessBoard.queen[i].actual_piece[0].captured): # If not captured
+                    if (self.fileToInt(_rook.file) + k < 8): # Right move
+                        if (self.valid_move(_rook, self.add_file(_rook.file, k), _rook.rank, _chessBoard)):
+                            thisMove, h = self.create_move(_rook, i, self.add_file(_rook.file, k), _rook.rank, _chessBoard, MinimaxTurn)
+                            if (currentDepth < depthLimit):
+                                h = self.getMoves(thisMove, currentDepth+1, depthLimit, MinimaxTurn*-1)
+                            else:
+                                return h
+                            currentPossibleMoves.put(thisMove, h)
+                    if (self.fileToInt(_rook.file) + k >= 0): # Left move
+                        if (self.valid_move(_rook, self.add_file(_rook.file, -k), _rook.rank, _chessBoard)):
+                            thisMove, h = self.create_move(_rook, i, self.add_file(_rook.file, -k), _rook.rank, _chessBoard, MinimaxTurn)
+                            if (currentDepth < depthLimit):
+                                h = self.getMoves(thisMove, currentDepth+1, depthLimit, MinimaxTurn*-1)
+                            else:
+                                return h
+                            currentPossibleMoves.put(thisMove, h)
+                    if (_rook.rank + k <= 8): # Upwards move
+                        if (self.valid_move(_rook, _rook.file, _rook.rank + k, _chessBoard)):
+                            thisMove, h = self.create_move(_rook, i, _rook.file, _rook.rank + k, _chessBoard, MinimaxTurn)
+                            if (currentDepth < depthLimit):
+                                h = self.getMoves(thisMove, currentDepth+1, depthLimit, MinimaxTurn*-1)
+                            else:
+                                return h
+                            currentPossibleMoves.put(thisMove, h)
+                    if (_rook.rank - k >= 0): # Downwards move
+                        if (self.valid_move(_rook, _rook.file, _rook.rank - k, _chessBoard)):
+                            thisMove, h = self.create_move(_rook, i, _rook.file, _rook.rank - k, _chessBoard, MinimaxTurn)
+                            if (currentDepth < depthLimit):
+                                h = self.getMoves(thisMove, currentDepth+1, depthLimit, MinimaxTurn*-1)
+                            else:
+                                return h
+                            currentPossibleMoves.put(thisMove, h)
+        for i in range(len(_chessBoard.queen if MinimaxTurn > 0 else _chessBoard.enemyQueen)): # Check QUEEN moves
+            _queen = _chessBoard.queen[i] if MinimaxTurn > 0 else _chessBoard.enemyQueen[i]
+            if (not _queen.actual_piece.captured): # If not captured
                 for k in range(8):
-                    if (self.fileToInt(_chessBoard.queen[i].file) + k < 8 and _chessBoard.queen[i].rank - k >= 0): # Bottom Right move
-                        if (self.valid_move(_chessBoard.queen[i], self.add_file(_chessBoard.queen[i].file, k), _chessBoard.queen[i].rank - k, _chessBoard)):
-                            currentPossibleMoves.put(*self.create_move(_chessBoard.queen[i], i, self.add_file(_chessBoard.queen[i].file, k), _chessBoard.queen[i].rank - k, _chessBoard))
-                            #_chessBoard.queen[i].move(self.add_file(_chessBoard.queen[i].file, k), _chessBoard.queen[i].rank - k)
-                    if (self.fileToInt(_chessBoard.queen[i].file) - k >= 0 and _chessBoard.queen[i].rank - k >= 0): # Bottom Left move
-                        if (self.valid_move(_chessBoard.queen[i], self.add_file(_chessBoard.queen[i].file, -k), _chessBoard.queen[i].rank - k, _chessBoard)):
-                            currentPossibleMoves.put(*self.create_move(_chessBoard.queen[i], i, self.add_file(_chessBoard.queen[i].file, -k), _chessBoard.queen[i].rank - k, _chessBoard))
-                            #_chessBoard.queen[i].move(self.add_file(_chessBoard.queen[i].file, -k), _chessBoard.queen[i].rank - k)
-                    if (self.fileToInt(_chessBoard.queen[i].file) - k >= 0 and _chessBoard.queen[i].rank + k <= 8): # Top Left move
-                        if (self.valid_move(_chessBoard.queen[i], self.add_file(_chessBoard.queen[i].file, -k), _chessBoard.queen[i].rank + k, _chessBoard)):
-                            currentPossibleMoves.put(*self.create_move(_chessBoard.queen[i], i, self.add_file(_chessBoard.queen[i].file, -k), _chessBoard.queen[i].rank + k, _chessBoard))
-                            #_chessBoard.queen[i].move(self.add_file(_chessBoard.queen[i].file, -k), _chessBoard.queen[i].rank + k)
-                    if (self.fileToInt(_chessBoard.queen[i].file) + k < 8 and _chessBoard.queen[i].rank + k <= 8): # Top Right move
-                        if (self.valid_move(_chessBoard.queen[i], self.add_file(_chessBoard.queen[i].file, k), _chessBoard.queen[i].rank + k, _chessBoard)):
-                            currentPossibleMoves.put(*self.create_move(_chessBoard.queen[i], i, self.add_file(_chessBoard.queen[i].file, k), _chessBoard.queen[i].rank + k, _chessBoard))
-                            #_chessBoard.queen[i].move(self.add_file(_chessBoard.queen[i].file, k), _chessBoard.queen[i].rank + k)
-                    if (self.fileToInt(_chessBoard.queen[i].file) + k < 8): # Right move
-                        if (self.valid_move(_chessBoard.queen[i], self.add_file(_chessBoard.queen[i].file, k), _chessBoard.queen[i].rank, _chessBoard)):
-                            currentPossibleMoves.put(*self.create_move(_chessBoard.queen[i], i, self.add_file(_chessBoard.queen[i].file, k), _chessBoard.queen[i].rank, _chessBoard))
-                            #_chessBoard.queen[i].move(self.add_file(_chessBoard.queen[i].file, k), _chessBoard.queen[i].rank)
-                    if (self.fileToInt(_chessBoard.queen[i].file) + k >= 0): # Left move
-                        if (self.valid_move(_chessBoard.queen[i], self.add_file(_chessBoard.queen[i].file, -k), _chessBoard.queen[i].rank, _chessBoard)):
-                            currentPossibleMoves.put(*self.create_move(_chessBoard.queen[i], i, self.add_file(_chessBoard.queen[i].file, -k), _chessBoard.queen[i].rank, _chessBoard))
-                            #_chessBoard.queen[i].move(self.add_file(_chessBoard.queen[i].file, -k), _chessBoard.queen[i].rank)
-                    if (_chessBoard.queen[i].rank + k <= 8): # Upwards move
-                        if (self.valid_move(_chessBoard.queen[i], _chessBoard.queen[i].file, _chessBoard.queen[i].rank + k, _chessBoard)):
-                            currentPossibleMoves.put(*self.create_move(_chessBoard.queen[i], i, _chessBoard.queen[i].file, _chessBoard.queen[i].rank + k, _chessBoard))
-                            #_chessBoard.queen[i].move(_chessBoard.queen[i].file, _chessBoard.queen[i].rank + k)
-                    if (_chessBoard.queen[i].rank - k >= 0): # Downwards move
-                        if (self.valid_move(_chessBoard.queen[i], _chessBoard.queen[i].file, _chessBoard.queen[i].rank - k, _chessBoard)):
-                            currentPossibleMoves.put(*self.create_move(_chessBoard.queen[i], i, _chessBoard.queen[i].file, _chessBoard.queen[i].rank - k, _chessBoard))
-                            #_chessBoard.queen[i].move(_chessBoard.queen[i].file, _chessBoard.queen[i].rank - k)
-        for i in range(len(_chessBoard.king)): # Check KING moves
-            if (not _chessBoard.king[i].actual_piece[0].captured): # If not captured
-                if (self.fileToInt(_chessBoard.king[i].file) + 1 < 8 and _chessBoard.king[i].rank - 1 >= 0): # Bottom Right move
-                    if (self.valid_move(_chessBoard.king[i], self.add_file(_chessBoard.king[i].file, 1), _chessBoard.king[i].rank - 1, _chessBoard)):
-                        currentPossibleMoves.put(*self.create_move(_chessBoard.king[i], 0, self.add_file(_chessBoard.king[i].file, 1), _chessBoard.king[i].rank - 1, _chessBoard))
-                        #_chessBoard.king[i].move(self.add_file(_chessBoard.king[i].file, 1), _chessBoard.king[i].rank - 1)
-                if (self.fileToInt(_chessBoard.king[i].file) - 1 >= 0 and _chessBoard.king[i].rank - 1 >= 0): # Bottom Left move
-                    if (self.valid_move(_chessBoard.king[i], self.add_file(_chessBoard.king[i].file, -1), _chessBoard.king[i].rank - 1, _chessBoard)):
-                        currentPossibleMoves.put(*self.create_move(_chessBoard.king[i], 0, self.add_file(_chessBoard.king[i].file, -1), _chessBoard.king[i].rank - 1, _chessBoard))
-                        #_chessBoard.king[i].move(self.add_file(_chessBoard.king[i].file, -1), _chessBoard.king[i].rank - 1)
-                if (self.fileToInt(_chessBoard.king[i].file) - 1 >= 0 and _chessBoard.king[i].rank + 1 <= 8): # Top Left move
-                    if (self.valid_move(_chessBoard.king[i], self.add_file(_chessBoard.king[i].file, -1), _chessBoard.king[i].rank + 1, _chessBoard)):
-                        currentPossibleMoves.put(*self.create_move(_chessBoard.king[i], 0, self.add_file(_chessBoard.king[i].file, -1), _chessBoard.king[i].rank + 1, _chessBoard))
-                        #_chessBoard.king[i].move(self.add_file(_chessBoard.king[i].file, -1), _chessBoard.king[i].rank + 1)
-                if (self.fileToInt(_chessBoard.king[i].file) + 1 < 8 and _chessBoard.king[i].rank + 1 <= 8): # Top Right move
-                    if (self.valid_move(_chessBoard.king[i], self.add_file(_chessBoard.king[i].file, 1), _chessBoard.king[i].rank + 1, _chessBoard)):
-                        currentPossibleMoves.put(*self.create_move(_chessBoard.king[i], 0, self.add_file(_chessBoard.king[i].file, 1), _chessBoard.king[i].rank + 1, _chessBoard))
-                        #_chessBoard.king[i].move(self.add_file(_chessBoard.king[i].file, 1), _chessBoard.king[i].rank + 1)
-                if (self.fileToInt(_chessBoard.king[i].file) + 1 < 8): # Right move
-                    if (self.valid_move(_chessBoard.king[i], self.add_file(_chessBoard.king[i].file, 1), _chessBoard.king[i].rank, _chessBoard)):
-                        currentPossibleMoves.put(*self.create_move(_chessBoard.king[i], 0, self.add_file(_chessBoard.king[i].file, 1), _chessBoard.king[i].rank, _chessBoard))
-                        #_chessBoard.king[i].move(self.add_file(_chessBoard.king[i].file, 1), _chessBoard.king[i].rank)
-                if (self.fileToInt(_chessBoard.king[i].file) - 1 >= 0): # Left move
-                    if (self.valid_move(_chessBoard.king[i], self.add_file(_chessBoard.king[i].file, -1), _chessBoard.king[i].rank, _chessBoard)):
-                        currentPossibleMoves.put(*self.create_move(_chessBoard.king[i], 0, self.add_file(_chessBoard.king[i].file, -1), _chessBoard.king[i].rank, _chessBoard))
-                        #_chessBoard.king[i].move(self.add_file(_chessBoard.king[i].file, -1), _chessBoard.king[i].rank)
-                if (_chessBoard.king[i].rank + 1 <= 8): # Upwards move
-                    if (self.valid_move(_chessBoard.king[i], _chessBoard.king[i].file, _chessBoard.king[i].rank + 1, _chessBoard)):
-                        currentPossibleMoves.put(*self.create_move(_chessBoard.king[i], 0, _chessBoard.king[i].file, _chessBoard.king[i].rank + 1, _chessBoard))
-                       # _chessBoard.king[i].move(_chessBoard.king[i].file, _chessBoard.king[i].rank + 1)
-                if (_chessBoard.king[i].rank - 1 >= 0): # Downwards move
-                    if (self.valid_move(_chessBoard.king[i], _chessBoard.king[i].file, _chessBoard.king[i].rank - 1, _chessBoard)):
-                        currentPossibleMoves.put(*self.create_move(_chessBoard.king[i], 0, _chessBoard.king[i].file, _chessBoard.king[i].rank - 1, _chessBoard))
-                        #_chessBoard.king[i].move(_chessBoard.king[i].file, _chessBoard.king[i].rank - 1)
+                    if (self.fileToInt(_queen.file) + k < 8 and _queen.rank - k >= 0): # Bottom Right move
+                        if (self.valid_move(_queen, self.add_file(_queen.file, k), _queen.rank - k, _chessBoard)):
+                            thisMove, h = self.create_move(_queen, i, self.add_file(_queen.file, k), _queen.rank - k, _chessBoard, MinimaxTurn)
+                            if (currentDepth < depthLimit):
+                                h = self.getMoves(thisMove, currentDepth+1, depthLimit, MinimaxTurn*-1)
+                            else:
+                                return h
+                            currentPossibleMoves.put(thisMove, h)
+                    if (self.fileToInt(_queen.file) - k >= 0 and _queen.rank - k >= 0): # Bottom Left move
+                        if (self.valid_move(_queen, self.add_file(_queen.file, -k), _queen.rank - k, _chessBoard)):
+                            thisMove, h = self.create_move(_queen, i, self.add_file(_queen.file, -k), _queen.rank - k, _chessBoard, MinimaxTurn)
+                            if (currentDepth < depthLimit):
+                                h = self.getMoves(thisMove, currentDepth+1, depthLimit, MinimaxTurn*-1)
+                            else:
+                                return h
+                            currentPossibleMoves.put(thisMove, h)
+                    if (self.fileToInt(_queen.file) - k >= 0 and _queen.rank + k <= 8): # Top Left move
+                        if (self.valid_move(_queen, self.add_file(_queen.file, -k), _queen.rank + k, _chessBoard)):
+                            thisMove, h = self.create_move(_queen, i, self.add_file(_queen.file, -k), _queen.rank + k, _chessBoard, MinimaxTurn)
+                            if (currentDepth < depthLimit):
+                                h = self.getMoves(thisMove, currentDepth+1, depthLimit, MinimaxTurn*-1)
+                            else:
+                                return h
+                            currentPossibleMoves.put(thisMove, h)
+                    if (self.fileToInt(_queen.file) + k < 8 and _queen.rank + k <= 8): # Top Right move
+                        if (self.valid_move(_queen, self.add_file(_queen.file, k), _queen.rank + k, _chessBoard)):
+                            thisMove, h = self.create_move(_queen, i, self.add_file(_queen.file, k), _queen.rank + k, _chessBoard, MinimaxTurn)
+                            if (currentDepth < depthLimit):
+                                h = self.getMoves(thisMove, currentDepth+1, depthLimit, MinimaxTurn*-1)
+                            else:
+                                return h
+                            currentPossibleMoves.put(thisMove, h)
+                    if (self.fileToInt(_queen.file) + k < 8): # Right move
+                        if (self.valid_move(_queen, self.add_file(_queen.file, k), _queen.rank, _chessBoard)):
+                            thisMove, h = self.create_move(_queen, i, self.add_file(_queen.file, k), _queen.rank, _chessBoard, MinimaxTurn)
+                            if (currentDepth < depthLimit):
+                                h = self.getMoves(thisMove, currentDepth+1, depthLimit, MinimaxTurn*-1)
+                            else:
+                                return h
+                            currentPossibleMoves.put(thisMove, h)
+                    if (self.fileToInt(_queen.file) + k >= 0): # Left move
+                        if (self.valid_move(_queen, self.add_file(_queen.file, -k), _queen.rank, _chessBoard)):
+                            thisMove, h = self.create_move(_queen, i, self.add_file(_queen.file, -k), _queen.rank, _chessBoard, MinimaxTurn)
+                            if (currentDepth < depthLimit):
+                                h = self.getMoves(thisMove, currentDepth+1, depthLimit, MinimaxTurn*-1)
+                            else:
+                                return h
+                            currentPossibleMoves.put(thisMove, h)
+                    if (_queen.rank + k <= 8): # Upwards move
+                        if (self.valid_move(_queen, _queen.file, _queen.rank + k, _chessBoard)):
+                            thisMove, h = self.create_move(_queen, i, _queen.file, _queen.rank + k, _chessBoard, MinimaxTurn)
+                            if (currentDepth < depthLimit):
+                                h = self.getMoves(thisMove, currentDepth+1, depthLimit, MinimaxTurn*-1)
+                            else:
+                                return h
+                            currentPossibleMoves.put(thisMove, h)
+                    if (_queen.rank - k >= 0): # Downwards move
+                        if (self.valid_move(_queen, _queen.file, _queen.rank - k, _chessBoard)):
+                            thisMove, h = self.create_move(_queen, i, _queen.file, _queen.rank - k, _chessBoard, MinimaxTurn)
+                            if (currentDepth < depthLimit):
+                                h = self.getMoves(thisMove, currentDepth+1, depthLimit, MinimaxTurn*-1)
+                            else:
+                                return h
+                            currentPossibleMoves.put(thisMove, h)
+        for i in range(len(_chessBoard.king if MinimaxTurn > 0 else _chessBoard.enemyKing)): # Check KING moves
+            _king = _chessBoard.king[i] if MinimaxTurn > 0 else _chessBoard.enemyKing[i]
+            if (not _king.actual_piece.captured): # If not captured
+                if (self.fileToInt(_king.file) + 1 < 8 and _king.rank - 1 >= 0): # Bottom Right move
+                    if (self.valid_move(_king, self.add_file(_king.file, 1), _king.rank - 1, _chessBoard)):
+                        thisMove, h = self.create_move(_king, 0, self.add_file(_king.file, 1), _king.rank - 1, _chessBoard, MinimaxTurn)
+                        if (currentDepth < depthLimit):
+                            h = self.getMoves(thisMove, currentDepth+1, depthLimit, MinimaxTurn*-1)
+                        else:
+                            return h
+                        currentPossibleMoves.put(thisMove, h)
+                if (self.fileToInt(_king.file) - 1 >= 0 and _king.rank - 1 >= 0): # Bottom Left move
+                    if (self.valid_move(_king, self.add_file(_king.file, -1), _king.rank - 1, _chessBoard)):
+                        thisMove, h = self.create_move(_king, 0, self.add_file(_king.file, -1), _king.rank - 1, _chessBoard, MinimaxTurn)
+                        if (currentDepth < depthLimit):
+                            h = self.getMoves(thisMove, currentDepth+1, depthLimit, MinimaxTurn*-1)
+                        else:
+                            return h
+                        currentPossibleMoves.put(thisMove, h)
+                if (self.fileToInt(_king.file) - 1 >= 0 and _king.rank + 1 <= 8): # Top Left move
+                    if (self.valid_move(_king, self.add_file(_king.file, -1), _king.rank + 1, _chessBoard)):
+                        thisMove, h = self.create_move(_king, 0, self.add_file(_king.file, -1), _king.rank + 1, _chessBoard, MinimaxTurn)
+                        if (currentDepth < depthLimit):
+                            h = self.getMoves(thisMove, currentDepth+1, depthLimit, MinimaxTurn*-1)
+                        else:
+                            return h
+                        currentPossibleMoves.put(thisMove, h)
+                if (self.fileToInt(_king.file) + 1 < 8 and _king.rank + 1 <= 8): # Top Right move
+                    if (self.valid_move(_king, self.add_file(_king.file, 1), _king.rank + 1, _chessBoard)):
+                        thisMove, h = self.create_move(_king, 0, self.add_file(_king.file, 1), _king.rank + 1, _chessBoard, MinimaxTurn)
+                        if (currentDepth < depthLimit):
+                            h = self.getMoves(thisMove, currentDepth+1, depthLimit, MinimaxTurn*-1)
+                        else:
+                            return h
+                        currentPossibleMoves.put(thisMove, h)
+                if (self.fileToInt(_king.file) + 1 < 8): # Right move
+                    if (self.valid_move(_king, self.add_file(_king.file, 1), _king.rank, _chessBoard)):
+                        thisMove, h = self.create_move(_king, 0, self.add_file(_king.file, 1), _king.rank, _chessBoard, MinimaxTurn)
+                        if (currentDepth < depthLimit):
+                            h = self.getMoves(thisMove, currentDepth+1, depthLimit, MinimaxTurn*-1)
+                        else:
+                            return h
+                        currentPossibleMoves.put(thisMove, h)
+                if (self.fileToInt(_king.file) - 1 >= 0): # Left move
+                    if (self.valid_move(_king, self.add_file(_king.file, -1), _king.rank, _chessBoard)):
+                        thisMove, h = self.create_move(_king, 0, self.add_file(_king.file, -1), _king.rank, _chessBoard, MinimaxTurn)
+                        if (currentDepth < depthLimit):
+                            h = self.getMoves(thisMove, currentDepth+1, depthLimit, MinimaxTurn*-1)
+                        else:
+                            return h
+                        currentPossibleMoves.put(thisMove, h)
+                if (_king.rank + 1 <= 8): # Upwards move
+                    if (self.valid_move(_king, _king.file, _king.rank + 1, _chessBoard)):
+                        thisMove, h = self.create_move(_king, 0, _king.file, _king.rank + 1, _chessBoard, MinimaxTurn)
+                        if (currentDepth < depthLimit):
+                            h = self.getMoves(thisMove, currentDepth+1, depthLimit, MinimaxTurn*-1)
+                        else:
+                            return h
+                        currentPossibleMoves.put(thisMove, h)
+                if (_king.rank - 1 >= 0): # Downwards move
+                    if (self.valid_move(_king, _king.file, _king.rank - 1, _chessBoard)):
+                        thisMove, h = self.create_move(_king, 0, _king.file, _king.rank - 1, _chessBoard, MinimaxTurn)
+                        if (currentDepth < depthLimit):
+                            h = self.getMoves(thisMove, currentDepth+1, depthLimit, MinimaxTurn*-1)
+                        else:
+                            return h
+                        currentPossibleMoves.put(thisMove, h)
                 # CASTLING
-                if (not _chessBoard.king[i].actual_piece[0].has_moved):
+                if (not _king.actual_piece.has_moved):
                     for k in range(0, len(_chessBoard.rook)):
-                        if (not _chessBoard.rook[k].actual_piece[0].has_moved and not _chessBoard.rook[k].actual_piece[0].captured):
-                            if (self.fileToInt(_chessBoard.rook[k].file) > self.fileToInt(_chessBoard.king[i].file)):
-                                if (self.valid_move(_chessBoard.king[i], self.add_file(_chessBoard.king[i].file, 2), _chessBoard.king[i].rank, _chessBoard)):
-                                    currentPossibleMoves.put(*self.create_move(_chessBoard.king[i], 0, self.add_file(_chessBoard.king[i].file, 2), _chessBoard.king[i].rank, _chessBoard))
-                                    #_chessBoard.king[i].move(self.add_file(_chessBoard.king[i].file, 2), _chessBoard.king[i].rank)
-                            elif (self.fileToInt(_chessBoard.rook[k].file) < self.fileToInt(_chessBoard.king[i].file)):
-                                if (self.valid_move(_chessBoard.king[i], self.add_file(_chessBoard.king[i].file, -2), _chessBoard.king[i].rank, _chessBoard)):
-                                    currentPossibleMoves.put(*self.create_move(_chessBoard.king[i], 0, self.add_file(_chessBoard.king[i].file, -2), _chessBoard.king[i].rank, _chessBoard))
-                                    #_chessBoard.king[i].move(self.add_file(_chessBoard.king[i].file, -2), _chessBoard.king[i].rank)
+                        if (not _chessBoard.rook[k].actual_piece.has_moved and not _chessBoard.rook[k].actual_piece.captured):
+                            if (self.fileToInt(_chessBoard.rook[k].file) > self.fileToInt(_king.file)):
+                                if (self.valid_move(_king, self.add_file(_king.file, 2), _king.rank, _chessBoard)):
+                                    thisMove, h = self.create_move(_king, 0, self.add_file(_king.file, 2), _king.rank, _chessBoard, MinimaxTurn)
+                                    if (currentDepth < depthLimit):
+                                        h = self.getMoves(thisMove, currentDepth+1, depthLimit, MinimaxTurn*-1)
+                                    else:
+                                        return h
+                                    currentPossibleMoves.put(thisMove, h)
+                            elif (self.fileToInt(_chessBoard.rook[k].file) < self.fileToInt(_king.file)):
+                                if (self.valid_move(_king, self.add_file(_king.file, -2), _king.rank, _chessBoard)):
+                                    thisMove, h = self.create_move(_king, 0, self.add_file(_king.file, -2), _king.rank, _chessBoard, MinimaxTurn)
+                                    if (currentDepth < depthLimit):
+                                        h = self.getMoves(thisMove, currentDepth+1, depthLimit, MinimaxTurn*-1)
+                                    else:
+                                        return h
+                                    currentPossibleMoves.put(thisMove, h)
         return currentPossibleMoves
 
     def get_name(self):
@@ -837,35 +975,35 @@ class AI(BaseAI):
             if (not prevMove.captured == None):
                 if (prevMove.captured.type == "Pawn"):
                     for i in range(len(self.chessBoard[-1].pawn)):
-                        if (prevMove.captured.id == self.chessBoard[-1].pawn[i].actual_piece[0].id):
+                        if (prevMove.captured.id == self.chessBoard[-1].pawn[i].actual_piece.id):
                             print("Pawn captured")
                             del self.chessBoard[-1].pawn[i]
                             capturedPiece = True
                             break
                 elif (prevMove.captured.type == "Bishop"):
                     for i in range(len(self.chessBoard[-1].bishop)):
-                        if (prevMove.captured.id == self.chessBoard[-1].bishop[i].actual_piece[0].id):
+                        if (prevMove.captured.id == self.chessBoard[-1].bishop[i].actual_piece.id):
                             print("Bishop captured")
                             del self.chessBoard[-1].bishop[i]
                             capturedPiece = True
                             break
                 elif (prevMove.captured.type == "Rook"):
                     for i in range(len(self.chessBoard[-1].rook)):
-                        if (prevMove.captured.id == self.chessBoard[-1].rook[i].actual_piece[0].id):
+                        if (prevMove.captured.id == self.chessBoard[-1].rook[i].actual_piece.id):
                             print("Rook captured")
                             del self.chessBoard[-1].rook[i]
                             capturedPiece = True
                             break
                 elif (prevMove.captured.type == "Knight"):
                     for i in range(len(self.chessBoard[-1].knight)):
-                        if (prevMove.captured.id == self.chessBoard[-1].knight[i].actual_piece[0].id):
+                        if (prevMove.captured.id == self.chessBoard[-1].knight[i].actual_piece.id):
                             print("Knight captured")
                             del self.chessBoard[-1].knight[i]
                             capturedPiece = True
                             break
                 elif (prevMove.captured.type == "Queen"):
                     for i in range(len(self.chessBoard[-1].queen)):
-                        if (prevMove.captured.id == self.chessBoard[-1].queen[i].actual_piece[0].id):
+                        if (prevMove.captured.id == self.chessBoard[-1].queen[i].actual_piece.id):
                             print("Queen captured")
                             del self.chessBoard[-1].queen[i]
                             capturedPiece = True
@@ -896,21 +1034,9 @@ class AI(BaseAI):
         # 1) print the board to the console
         self.print_current_board()
 
-        # 2) print the opponent's last move to the console
-        #if len(self.game.moves) > 0:
-            #print("Opponent's Last Move: ", self.game.moves[-1].piece.type, "'", self.game.moves[-1].to_file, self.game.moves[-1].to_rank, "'")
-
-        # 3) print how much time remaining this AI has to calculate moves
-        # print("Time Remaining: " + str(self.player.time_remaining) + " ns")
-
-        # 4) make a random (and probably invalid) move.
-        #random_piece = random.choice(self.player.pieces)
-        #random_file = chr(ord("a") + random.randrange(8))
-        #random_rank = random.randrange(8) + 1
-        #random_piece.move(random_file, random_rank)
         currentPossibleMoves = pQueue()
-        currentPossibleMoves = self.getMyMoves(self.chessBoard[-1]) # Look at all moves based on Minimax
-        print(len(self.chessBoard))
+        currentPossibleMoves = self.getMoves(self.chessBoard[-1], 1, 2, 1) # Look at all moves based on Minimax
+                                            #   Current Board, Starting Depth (0 = Min Player, 1 = Max (Me)), Depth Limit, 1=Max Players Turn
         if (self.player.in_check):
             print("In Check...")
 
@@ -919,8 +1045,7 @@ class AI(BaseAI):
             bestMove, bestPriority = currentPossibleMoves.pop_back()
 
         #promotion = getPromotionType() # DEFINE THIS!
-        print(bestMove.currentMove.actionObj.actual_piece[0].captured, bestMove.currentMove.actionObj.actual_piece[0].file, bestMove.currentMove.actionObj.actual_piece[0]. rank, bestMove.currentMove.actionObj.actual_piece[0].id)
-        _move = bestMove.currentMove.actionObj.actual_piece[0].move(bestMove.currentMove.newFile, bestMove.currentMove.newRank, self.piece_types[random.randrange(len(self.piece_types))])
+        _move = bestMove.currentMove.actionObj.actual_piece.move(bestMove.currentMove.newFile, bestMove.currentMove.newRank, self.piece_types[random.randrange(len(self.piece_types))])
         
         bestMove.currentMove.actionObj.move(bestMove.currentMove.newFile, bestMove.currentMove.newRank)
 

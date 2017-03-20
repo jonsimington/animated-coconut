@@ -139,13 +139,13 @@ class chessPiece:
         self.rank = actual.rank
         self.id = actual.id
         self.type = actual.type
-        self.actual_piece = [actual]
+        self.actual_piece = actual
     def move(self, newF, newR, promo = ""):
         self.file = newF
         self.rank = newR
 
 class chessBoard:
-    def __init__(self, pMove = None, cMove = None):        
+    def __init__(self, pMove = None, cMove = None, flip = False):        
         if (pMove == None):
             self.pawn = []
             self.rook = []
@@ -161,7 +161,7 @@ class chessBoard:
             self.enemyKing = []
             self.numMoves = 0
             self.board = MAP(8, 8)
-        else:
+        elif (not flip):
             self.pawn = deepcopy(pMove.pawn)
             self.rook = deepcopy(pMove.rook)
             self.bishop = deepcopy(pMove.bishop)
@@ -174,6 +174,21 @@ class chessBoard:
             self.enemyKnight = deepcopy(pMove.enemyKnight)
             self.enemyQueen = deepcopy(pMove.enemyQueen)
             self.enemyKing = deepcopy(pMove.enemyKing)
+            self.numMoves = pMove.numMoves + 1
+            self.board = deepcopy(pMove.board)
+        elif (flip):
+            self.pawn = deepcopy(pMove.enemyPawn)
+            self.rook = deepcopy(pMove.enemyRook)
+            self.bishop = deepcopy(pMove.enemyBishop)
+            self.knight = deepcopy(pMove.enemyKnight)
+            self.queen = deepcopy(pMove.enemyQueen)
+            self.king = deepcopy(pMove.enemyKing)
+            self.enemyPawn = deepcopy(pMove.pawn)
+            self.enemyRook = deepcopy(pMove.rook)
+            self.enemyBishop = deepcopy(pMove.bishop)
+            self.enemyKnight = deepcopy(pMove.knight)
+            self.enemyQueen = deepcopy(pMove.queen)
+            self.enemyKing = deepcopy(pMove.king)
             self.numMoves = pMove.numMoves + 1
             self.board = deepcopy(pMove.board)
 
