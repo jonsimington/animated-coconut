@@ -1,5 +1,7 @@
 # Point class to store a point
 import random
+from copy import deepcopy
+
 class point:
     def __init__(self, xx, yy):
         self.x = xx
@@ -47,14 +49,15 @@ class MAP:
 # - an array of Alligators, an array of Turtles, and an array of Trees
 # - with optional parameters of Path-Cost, and Parent State
 class move:
-    def __init__(self, Board = None, ActObj = None, ActObjNum = 0, newF = 0, newR = 0, heuristicV = 0):
-        self.board = Board
+    def __init__(self, ActObj = None, ActObjNum = 0, newF = 0, newR = 0, heuristicV = 0, parent = None):
         #self.pathCost = deepcopy(pState.pathCost)
         self.actionObj = ActObj
         self.actionObjNum = ActObjNum
         self.newFile = newF
         self.newRank = newR
         self.weight = heuristicV
+        self.parent = parent
+        self.children = []
     #################################
     # __eq__: allows a state to be using in a comparison operator
     def __eq__(self, otherState):
@@ -71,6 +74,8 @@ class move:
         self.actionObj = actObj
         self.pathCost = pathC
         self.actionObjNum = num
+    def addChild(self, childMove):
+        self.children.append(childMove)
 
 ####################################
 # A basic priority queue state
@@ -127,3 +132,51 @@ class pQueueObject:
     def __init__(self, data, weight):
         self.item = data
         self.priority = weight
+
+class chessPiece:
+    def __init__(self, actual):
+        self.file = actual.file
+        self.rank = actual.rank
+        self.id = actual.id
+        self.type = actual.type
+        self.actual_piece = [actual]
+    def move(self, newF, newR, promo = ""):
+        self.file = newF
+        self.rank = newR
+
+class chessBoard:
+    def __init__(self, pMove = None, cMove = None):        
+        if (pMove == None):
+            self.pawn = []
+            self.rook = []
+            self.bishop = []
+            self.knight = []
+            self.queen = []
+            self.king = []
+            self.enemyPawn = []
+            self.enemyRook = []
+            self.enemyBishop = []
+            self.enemyKnight = []
+            self.enemyQueen = []
+            self.enemyKing = []
+            self.numMoves = 0
+            self.board = MAP(8, 8)
+        else:
+            self.pawn = deepcopy(pMove.pawn)
+            self.rook = deepcopy(pMove.rook)
+            self.bishop = deepcopy(pMove.bishop)
+            self.knight = deepcopy(pMove.knight)
+            self.queen = deepcopy(pMove.queen)
+            self.king = deepcopy(pMove.king)
+            self.enemyPawn = deepcopy(pMove.enemyPawn)
+            self.enemyRook = deepcopy(pMove.enemyRook)
+            self.enemyBishop = deepcopy(pMove.enemyBishop)
+            self.enemyKnight = deepcopy(pMove.enemyKnight)
+            self.enemyQueen = deepcopy(pMove.enemyQueen)
+            self.enemyKing = deepcopy(pMove.enemyKing)
+            self.numMoves = pMove.numMoves + 1
+            self.board = deepcopy(pMove.board)
+
+        self.children = []
+        self.parent = pMove
+        self.currentMove = cMove
