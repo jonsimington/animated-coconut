@@ -139,6 +139,7 @@ class chessPiece:
         self.rank = actual.rank
         self.id = actual.id
         self.type = actual.type
+        self.captured = actual.captured
         self.actual_piece = actual
     def move(self, newF, newR, promo = ""):
         self.file = newF
@@ -162,36 +163,41 @@ class chessBoard:
             self.numMoves = 0
             self.board = MAP(8, 8)
         elif (not flip):
-            self.pawn = deepcopy(pMove.pawn)
-            self.rook = deepcopy(pMove.rook)
-            self.bishop = deepcopy(pMove.bishop)
-            self.knight = deepcopy(pMove.knight)
-            self.queen = deepcopy(pMove.queen)
-            self.king = deepcopy(pMove.king)
-            self.enemyPawn = deepcopy(pMove.enemyPawn)
-            self.enemyRook = deepcopy(pMove.enemyRook)
-            self.enemyBishop = deepcopy(pMove.enemyBishop)
-            self.enemyKnight = deepcopy(pMove.enemyKnight)
-            self.enemyQueen = deepcopy(pMove.enemyQueen)
-            self.enemyKing = deepcopy(pMove.enemyKing)
+            self.pawn = deepCopy(pMove.pawn)
+            self.rook = deepCopy(pMove.rook)
+            self.bishop = deepCopy(pMove.bishop)
+            self.knight = deepCopy(pMove.knight)
+            self.queen = deepCopy(pMove.queen)
+            self.king = deepCopy(pMove.king)
+            self.enemyPawn = deepCopy(pMove.enemyPawn)
+            self.enemyRook = deepCopy(pMove.enemyRook)
+            self.enemyBishop = deepCopy(pMove.enemyBishop)
+            self.enemyKnight = deepCopy(pMove.enemyKnight)
+            self.enemyQueen = deepCopy(pMove.enemyQueen)
+            self.enemyKing = deepCopy(pMove.enemyKing)
             self.numMoves = pMove.numMoves + 1
             self.board = deepcopy(pMove.board)
         elif (flip):
-            self.pawn = deepcopy(pMove.enemyPawn)
-            self.rook = deepcopy(pMove.enemyRook)
-            self.bishop = deepcopy(pMove.enemyBishop)
-            self.knight = deepcopy(pMove.enemyKnight)
-            self.queen = deepcopy(pMove.enemyQueen)
-            self.king = deepcopy(pMove.enemyKing)
-            self.enemyPawn = deepcopy(pMove.pawn)
-            self.enemyRook = deepcopy(pMove.rook)
-            self.enemyBishop = deepcopy(pMove.bishop)
-            self.enemyKnight = deepcopy(pMove.knight)
-            self.enemyQueen = deepcopy(pMove.queen)
-            self.enemyKing = deepcopy(pMove.king)
+            self.pawn = deepCopy(pMove.enemyPawn)
+            self.rook = deepCopy(pMove.enemyRook)
+            self.bishop = deepCopy(pMove.enemyBishop)
+            self.knight = deepCopy(pMove.enemyKnight)
+            self.queen = deepCopy(pMove.enemyQueen)
+            self.king = deepCopy(pMove.enemyKing)
+            self.enemyPawn = deepCopy(pMove.pawn)
+            self.enemyRook = deepCopy(pMove.rook)
+            self.enemyBishop = deepCopy(pMove.bishop)
+            self.enemyKnight = deepCopy(pMove.knight)
+            self.enemyQueen = deepCopy(pMove.queen)
+            self.enemyKing = deepCopy(pMove.king)
             self.numMoves = pMove.numMoves + 1
             self.board = deepcopy(pMove.board)
 
         self.children = []
         self.parent = pMove
         self.currentMove = cMove
+
+def deepCopy(oldList):
+    newList = []
+    newList.extend(oldList)
+    return newList
