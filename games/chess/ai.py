@@ -6,34 +6,46 @@ from .rtanq9_chess import *
 from random import shuffle
 from copy import deepcopy
 from time import sleep
+import time
+import math
 
 class AI(BaseAI):
     """ The basic AI functions that are the same between games. """
     chessBoard = []
     enemyBoard = []
+
+    AVERAGE_MOVES = 40 # Average number of moves in a game of chess
     
     color = 1 # 1 for White, -1 for Black
 
-    piece_types = [ "Bishop", "Rook", "Knight", "Queen" ]
+    piece_types = ["Bishop", "Rook", "Knight", "Queen"]
     # File -> x (a-h)
     # Rank -> y (0-7)
 
-    def find_check_piece(self, _chessBoard):
-        kingPos = point(self.fileToInt(_chessBoard.king[0].file), _chessBoard.king[0].rank-1)
+    def find_check_piece(self, _chessBoard, MinimaxTurn):
+        if (MinimaxTurn > 0):
+            kingPos = point(self.fileToInt(_chessBoard.king[0].file), _chessBoard.king[0].rank - 1)
+        else:
+            kingPos = point(self.fileToInt(_chessBoard.enemyKing[0].file), _chessBoard.enemyKing[0].rank - 1)
         if (_chessBoard.currentMove.actionObj.type == "King"):
-            kingPos = point(self.fileToInt(_chessBoard.currentMove.newFile), _chessBoard.currentMove.newRank-1)
+            kingPos = point(self.fileToInt(_chessBoard.currentMove.newFile), _chessBoard.currentMove.newRank - 1)
             if (self.fileToInt(_chessBoard.currentMove.actionObj.file) == kingPos.x + 2 or self.fileToInt(_chessBoard.currentMove.actionObj.file) == kingPos.x - 2):
-                return False # Can't castle while in check!
+                return False, point(0, 0) # Can't castle while in check!
 
         foundPiece = False
         _piece = point(0, 0)
-        myPieces = [ "P", "B", "R", "N", "Q" ]
-        diagonal_checks = [ "q", "b" ]
-        straight_checks = [ "q", "r" ]
-        straight_blocks_nonadjacent = [ "p", "k" ]
-        diagonal_blocks_nonadjacent = [ "p", "k" ]
-        diagonal_blocks = [ "n", "r" ]
-        straight_blocks = [ "n", "b", "p" ]
+        MinimaxColor = MinimaxTurn * self.color
+
+        myPieces = ["P", "B", "R", "N", "Q", "K"] if MinimaxTurn > 0 else ["p", "b", "r", "n", "q", "K"]
+        diagonal_checks = ["q", "b"] if MinimaxTurn > 0 else ["Q", "B"]
+        straight_checks = ["q", "r"] if MinimaxTurn > 0 else ["Q", "R"]
+        straight_blocks_nonadjacent = ["p", "k"] if MinimaxTurn > 0 else ["P", "K"]
+        diagonal_blocks_nonadjacent = ["p", "k"] if MinimaxTurn > 0 else ["P", "K"]
+        diagonal_blocks = ["n", "r"] if MinimaxTurn > 0 else ["N", "R"]
+        straight_blocks = ["n", "b", "p"] if MinimaxTurn > 0 else ["N", "B", "P"]
+        pawn = "p" if MinimaxTurn > 0 else "P"
+        knight = "n" if MinimaxTurn > 0 else "N"
+        king = "k" if MinimaxTurn > 0 else "K"
         topLeft = False
         above = False
         topRight = False
@@ -44,98 +56,99 @@ class AI(BaseAI):
         left = False
 
         distance = 1
-        #Start looking in a 3x3 grid around the king, and expand outward until a piece is found that is putting the king in check
+        #Start looking in a 3x3 grid around the king, and expand outward until
+        #a piece is found that is putting the king in check
         while (not foundPiece and distance < 8):
-            for f in range(distance*2 + 1):
-                for r in range(distance*2 + 1):
+            for f in range(distance * 2 + 1):
+                for r in range(distance * 2 + 1):
                     if (foundPiece):
-                        return True
+                        return True, _piece
                     # Top Row
-                    if (f == 0 and r == 0 and not topLeft and kingPos.x - distance >= 0 and kingPos.y + distance < 8 and not foundPiece):
-                        if (_chessBoard.board.location[kingPos.x - distance][kingPos.y + distance] in myPieces or
-                            _chessBoard.board.location[kingPos.x - distance][kingPos.y + distance] in diagonal_blocks or
+                    if (not topLeft and f == 0 and r == 0 and kingPos.x - distance >= 0 and kingPos.y + distance < 8 and not foundPiece):
+                        if (_chessBoard.board.location[kingPos.x - distance][kingPos.y + distance] in myPieces or 
+                            _chessBoard.board.location[kingPos.x - distance][kingPos.y + distance] in diagonal_blocks or 
                             (_chessBoard.board.location[kingPos.x - distance][kingPos.y + distance] in diagonal_blocks_nonadjacent and distance > 1)):
                             topLeft = True
-                        elif ((_chessBoard.board.location[kingPos.x - 1][kingPos.y + 1] == "p" and distance == 1 and self.color == 1) or
-                              (_chessBoard.board.location[kingPos.x - 1][kingPos.y + 1] == "k" and distance == 1) or
-                                _chessBoard.board.location[kingPos.x - distance][kingPos.y + distance] in diagonal_checks):
+                        elif ((_chessBoard.board.location[kingPos.x - 1][kingPos.y + 1] == pawn and distance == 1 and MinimaxColor > 0) or
+                              (_chessBoard.board.location[kingPos.x - 1][kingPos.y + 1] == king and distance == 1) or 
+                              _chessBoard.board.location[kingPos.x - distance][kingPos.y + distance] in diagonal_checks):
                             _piece.set(kingPos.x - distance, kingPos.y + distance)
                             foundPiece = True
                             break
-                    elif (f == distance and r == 0 and not above and kingPos.y + distance < 8 and not foundPiece):
-                        if (_chessBoard.board.location[kingPos.x][kingPos.y + distance] in myPieces or
-                            _chessBoard.board.location[kingPos.x][kingPos.y + distance] in straight_blocks or
+                    elif (not above and f == distance and r == 0 and kingPos.y + distance < 8 and not foundPiece):
+                        if (_chessBoard.board.location[kingPos.x][kingPos.y + distance] in myPieces or 
+                            _chessBoard.board.location[kingPos.x][kingPos.y + distance] in straight_blocks or 
                             (_chessBoard.board.location[kingPos.x][kingPos.y + distance] in straight_blocks_nonadjacent and distance > 1)):
                             above = True
-                        elif ((_chessBoard.board.location[kingPos.x][kingPos.y + 1] == "k" and distance == 1) or
-                                _chessBoard.board.location[kingPos.x][kingPos.y + distance] in straight_checks):
+                        elif (_chessBoard.board.location[kingPos.x][kingPos.y + distance] in straight_checks or
+                              (_chessBoard.board.location[kingPos.x][kingPos.y + 1] == king and distance == 1)):
                             _piece.set(kingPos.x, kingPos.y + distance)
                             foundPiece = True
                             break
-                    elif (f == distance*2 and r == 0 and not topRight and kingPos.x + distance < 8 and kingPos.y + distance < 8 and not foundPiece):
-                        if (_chessBoard.board.location[kingPos.x + distance][kingPos.y + distance] in myPieces or
-                            _chessBoard.board.location[kingPos.x + distance][kingPos.y + distance] in diagonal_blocks or
+                    elif (not topRight and f == distance * 2 and r == 0 and kingPos.x + distance < 8 and kingPos.y + distance < 8 and not foundPiece):
+                        if (_chessBoard.board.location[kingPos.x + distance][kingPos.y + distance] in myPieces or 
+                            _chessBoard.board.location[kingPos.x + distance][kingPos.y + distance] in diagonal_blocks or 
                             (_chessBoard.board.location[kingPos.x + distance][kingPos.y + distance] in diagonal_blocks_nonadjacent and distance > 1)):
                             topRight = True
-                        elif ((_chessBoard.board.location[kingPos.x + 1][kingPos.y + 1] == "p" and distance == 1 and self.color == 1) or
-                              (_chessBoard.board.location[kingPos.x + 1][kingPos.y + 1] == "k" and distance == 1) or
-                                _chessBoard.board.location[kingPos.x + distance][kingPos.y + distance] in diagonal_checks):
+                        elif ((_chessBoard.board.location[kingPos.x + 1][kingPos.y + 1] == pawn and distance == 1 and MinimaxColor > 0) or 
+                              (_chessBoard.board.location[kingPos.x + 1][kingPos.y + 1] == king and distance == 1) or 
+                              _chessBoard.board.location[kingPos.x + distance][kingPos.y + distance] in diagonal_checks):
                             _piece.set(kingPos.x + distance, kingPos.y + distance)
                             foundPiece = True
                             break
                     # Middle Row
-                    elif (f == 0 and r == distance and not left and kingPos.x - distance >= 0 and not foundPiece):
-                        if (_chessBoard.board.location[kingPos.x - distance][kingPos.y] in myPieces or
-                            _chessBoard.board.location[kingPos.x - distance][kingPos.y] in straight_blocks or
+                    elif (not left and f == 0 and r == distance and kingPos.x - distance >= 0 and not foundPiece):
+                        if (_chessBoard.board.location[kingPos.x - distance][kingPos.y] in myPieces or 
+                            _chessBoard.board.location[kingPos.x - distance][kingPos.y] in straight_blocks or 
                             (_chessBoard.board.location[kingPos.x - distance][kingPos.y] in straight_blocks_nonadjacent and distance > 1)):
                             left = True
-                        elif ((_chessBoard.board.location[kingPos.x - 1][kingPos.y] == "k" and distance == 1) or
-                                _chessBoard.board.location[kingPos.x - distance][kingPos.y] in straight_checks):
-                            _piece.set(kingPos.x - distance, kingPos.y - distance)
+                        elif (_chessBoard.board.location[kingPos.x - distance][kingPos.y] in straight_checks or 
+                              (_chessBoard.board.location[kingPos.x - 1][kingPos.y] == king and distance == 1)):
+                            _piece.set(kingPos.x - distance, kingPos.y)
                             foundPiece = True
                             break
                     elif (f == distance and r == distance and not foundPiece):
-                        pass # nothing to do! Since this our kings position...
-                    elif (f == distance*2 and r == distance and not right and kingPos.x + distance < 8 and not foundPiece):
-                        if (_chessBoard.board.location[kingPos.x + distance][kingPos.y] in myPieces or
-                            _chessBoard.board.location[kingPos.x + distance][kingPos.y] in straight_blocks or
+                        pass # nothing to do!  Since this our kings position...
+                    elif (not right and f == distance * 2 and r == distance and kingPos.x + distance < 8 and not foundPiece):
+                        if (_chessBoard.board.location[kingPos.x + distance][kingPos.y] in myPieces or 
+                            _chessBoard.board.location[kingPos.x + distance][kingPos.y] in straight_blocks or 
                             (_chessBoard.board.location[kingPos.x + distance][kingPos.y] in straight_blocks_nonadjacent and distance > 1)):
                             right = True
-                        elif ((_chessBoard.board.location[kingPos.x + 1][kingPos.y] == "k" and distance == 1) or
-                                _chessBoard.board.location[kingPos.x + distance][kingPos.y] in straight_checks):
-                            _piece.set(kingPos.x + distance, kingPos.y - distance)
+                        elif (_chessBoard.board.location[kingPos.x + distance][kingPos.y] in straight_checks or 
+                              (_chessBoard.board.location[kingPos.x + 1][kingPos.y] == king and distance == 1)):
+                            _piece.set(kingPos.x + distance, kingPos.y)
                             foundPiece = True
                             break
                     # Bottom Row
-                    elif (f == 0 and r == distance*2 and not bottomLeft and kingPos.x - distance >= 0 and kingPos.y - distance >= 0 and not foundPiece):
-                        if (_chessBoard.board.location[kingPos.x - distance][kingPos.y - distance] in myPieces or
-                            _chessBoard.board.location[kingPos.x - distance][kingPos.y - distance] in diagonal_blocks or
+                    elif (not bottomLeft and f == 0 and r == distance * 2 and kingPos.x - distance >= 0 and kingPos.y - distance >= 0 and not foundPiece):
+                        if (_chessBoard.board.location[kingPos.x - distance][kingPos.y - distance] in myPieces or 
+                            _chessBoard.board.location[kingPos.x - distance][kingPos.y - distance] in diagonal_blocks or 
                             (_chessBoard.board.location[kingPos.x - distance][kingPos.y - distance] in diagonal_blocks_nonadjacent and distance > 1)):
                             bottomLeft = True
-                        elif ((_chessBoard.board.location[kingPos.x - 1][kingPos.y - 1] == "p" and distance == 1 and self.color == -1) or
-                              (_chessBoard.board.location[kingPos.x - 1][kingPos.y - 1] == "k" and distance == 1) or
-                                _chessBoard.board.location[kingPos.x - distance][kingPos.y - distance] in diagonal_checks):
+                        elif ((_chessBoard.board.location[kingPos.x - 1][kingPos.y - 1] == pawn and distance == 1 and MinimaxColor < 0) or 
+                              (_chessBoard.board.location[kingPos.x - 1][kingPos.y - 1] == king and distance == 1) or 
+                              _chessBoard.board.location[kingPos.x - distance][kingPos.y - distance] in diagonal_checks):
                             _piece.set(kingPos.x - distance, kingPos.y - distance)
                             foundPiece = True
                             break
-                    elif (f == distance and r == distance*2 and not below and kingPos.y - distance >= 0 and not foundPiece):
-                        if (_chessBoard.board.location[kingPos.x][kingPos.y - distance] in myPieces or
-                            _chessBoard.board.location[kingPos.x][kingPos.y - distance] in straight_blocks or
+                    elif (not below and f == distance and r == distance * 2 and kingPos.y - distance >= 0 and not foundPiece):
+                        if (_chessBoard.board.location[kingPos.x][kingPos.y - distance] in myPieces or 
+                            _chessBoard.board.location[kingPos.x][kingPos.y - distance] in straight_blocks or 
                             (_chessBoard.board.location[kingPos.x][kingPos.y - distance] in straight_blocks_nonadjacent and distance > 1)):
                             below = True
-                        elif ((_chessBoard.board.location[kingPos.x][kingPos.y - 1] == "k" and distance == 1) or
-                                _chessBoard.board.location[kingPos.x][kingPos.y - distance] in straight_checks):
+                        elif (_chessBoard.board.location[kingPos.x][kingPos.y - distance] in straight_checks or 
+                              (_chessBoard.board.location[kingPos.x][kingPos.y - 1] == king and distance == 1)):
                             _piece.set(kingPos.x, kingPos.y - distance)
                             foundPiece = True
                             break
-                    elif (f == distance*2 and r == distance*2 and not bottomRight and kingPos.x + distance < 8 and kingPos.y - distance >= 0 and not foundPiece):
-                        if (_chessBoard.board.location[kingPos.x + distance][kingPos.y - distance] in myPieces or
-                            _chessBoard.board.location[kingPos.x + distance][kingPos.y - distance] in diagonal_blocks or
+                    elif (not bottomRight and f == distance * 2 and r == distance * 2 and kingPos.x + distance < 8 and kingPos.y - distance >= 0 and not foundPiece):
+                        if (_chessBoard.board.location[kingPos.x + distance][kingPos.y - distance] in myPieces or 
+                            _chessBoard.board.location[kingPos.x + distance][kingPos.y - distance] in diagonal_blocks or 
                             (_chessBoard.board.location[kingPos.x + distance][kingPos.y - distance] in diagonal_blocks_nonadjacent and distance > 1)):
                             bottomRight = True
-                        elif ((_chessBoard.board.location[kingPos.x + 1][kingPos.y - 1] == "p" and distance == 1 and self.color == -1) or
-                              (_chessBoard.board.location[kingPos.x + 1][kingPos.y - 1] == "k" and distance == 1) or
-                                _chessBoard.board.location[kingPos.x + distance][kingPos.y - distance] in diagonal_checks):
+                        elif ((_chessBoard.board.location[kingPos.x + 1][kingPos.y - 1] == pawn and distance == 1 and MinimaxColor < 0) or 
+                              (_chessBoard.board.location[kingPos.x + 1][kingPos.y - 1] == king and distance == 1) or 
+                              _chessBoard.board.location[kingPos.x + distance][kingPos.y - distance] in diagonal_checks):
                             _piece.set(kingPos.x + distance, kingPos.y - distance)
                             foundPiece = True
                             break
@@ -143,115 +156,113 @@ class AI(BaseAI):
                     if (distance == 2 and not foundPiece):
                         # Top Row
                         if (f == 1 and r == 0 and kingPos.x - 1 >= 0 and kingPos.y + 2 < 8):
-                            if (_chessBoard.board.location[kingPos.x - 1][kingPos.y + 2] == "n"):
+                            if (_chessBoard.board.location[kingPos.x - 1][kingPos.y + 2] == knight):
                                 _piece.set(kingPos.x - 1, kingPos.y + 2)
                                 foundPiece = True
                                 break
                         elif (f == 3 and r == 0 and kingPos.x + 1 < 8 and kingPos.y + 2 < 8):
-                            if (_chessBoard.board.location[kingPos.x + 1][kingPos.y + 2] == "n"):
+                            if (_chessBoard.board.location[kingPos.x + 1][kingPos.y + 2] == knight):
                                 _piece.set(kingPos.x + 1, kingPos.y + 2)
                                 foundPiece = True
                                 break
                         # 2nd Row
                         elif (f == 0 and r == 1 and kingPos.x - 2 >= 0 and kingPos.y + 1 < 8):
-                            if (_chessBoard.board.location[kingPos.x - 2][kingPos.y + 1] == "n"):
+                            if (_chessBoard.board.location[kingPos.x - 2][kingPos.y + 1] == knight):
                                 _piece.set(kingPos.x - 2, kingPos.y + 1)
                                 foundPiece = True
                                 break
                         elif (f == 4 and r == 1 and kingPos.x + 2 < 8 and kingPos.y + 1 < 8):
-                            if (_chessBoard.board.location[kingPos.x + 2][kingPos.y + 1] == "n"):
+                            if (_chessBoard.board.location[kingPos.x + 2][kingPos.y + 1] == knight):
                                 _piece.set(kingPos.x + 2, kingPos.y + 1)
                                 foundPiece = True
                                 break
                         # 4th Row
                         elif (f == 0 and r == 3 and kingPos.x - 2 >= 0 and kingPos.y - 1 >= 0):
-                            if (_chessBoard.board.location[kingPos.x - 2][kingPos.y - 1] == "n"):
+                            if (_chessBoard.board.location[kingPos.x - 2][kingPos.y - 1] == knight):
                                 _piece.set(kingPos.x - 2, kingPos.y - 1)
                                 foundPiece = True
                                 break
                         elif (f == 4 and r == 3 and kingPos.x + 2 < 8 and kingPos.y - 1 >= 0):
-                            if (_chessBoard.board.location[kingPos.x + 2][kingPos.y - 1] == "n"):
+                            if (_chessBoard.board.location[kingPos.x + 2][kingPos.y - 1] == knight):
                                 _piece.set(kingPos.x + 2, kingPos.y - 1)
                                 foundPiece = True
                                 break
                         # Bottom Row
                         elif (f == 1 and r == 4 and kingPos.x - 1 >= 0 and kingPos.y - 2 >= 0):
-                            if (_chessBoard.board.location[kingPos.x - 1][kingPos.y - 2] == "n"):
+                            if (_chessBoard.board.location[kingPos.x - 1][kingPos.y - 2] == knight):
                                 _piece.set(kingPos.x - 1, kingPos.y - 2)
                                 foundPiece = True
                                 break
                         elif (f == 3 and r == 4 and kingPos.x + 1 < 8 and kingPos.y - 2 >= 0):
-                            if (_chessBoard.board.location[kingPos.x + 1][kingPos.y - 2] == "n"):
+                            if (_chessBoard.board.location[kingPos.x + 1][kingPos.y - 2] == knight):
                                 _piece.set(kingPos.x + 1, kingPos.y - 2)
                                 foundPiece = True
                                 break
                 # END FOR
                 if (foundPiece):
-                    return True
+                    return True, _piece
             # END FOR
             if (foundPiece):
-                return True
+                return True, _piece
             distance += 1
         # END WHILE
         
-        return foundPiece
+        return foundPiece, _piece
 
     def check_diagonal(self, _chessBoard, oldLocation, newLocation, x_dir, y_dir): #
         # x_dir / y_dir / direction
-        #   1   /   1   / Up-Right
-        #   1   /  -1   / Down-Right
-        #  -1   /   1   / Up Left
-        #  -1   /  -1   / Down Left
+        #   1 / 1 / Up-Right
+                                                                                          #   1 / -1 / Down-Right
+        #  -1 / 1 / Up Left
+                                                                                          #  -1 / -1 / Down Left
         x_distance = abs(newLocation.x - oldLocation.x)
-        validPiecesToCapture = [ "p", "b", "r", "n", "q", "k" ]
+        validPiecesToCapture = ["p", "b", "r", "n", "q", "k"]
 
         for i in range(1, x_distance):
-            if (not _chessBoard.board.location[oldLocation.x + i*x_dir][oldLocation.y + i*y_dir] == ""):
+            if (not _chessBoard.board.location[oldLocation.x + i * x_dir][oldLocation.y + i * y_dir] == ""):
                 return False
-        if (_chessBoard.board.location[newLocation.x][newLocation.y] in validPiecesToCapture or
-            _chessBoard.board.location[newLocation.x][newLocation.y] == ""):
+        if (_chessBoard.board.location[newLocation.x][newLocation.y] in validPiecesToCapture or _chessBoard.board.location[newLocation.x][newLocation.y] == ""):
             return True
 
     def check_horizontal(self, _chessBoard, oldLocation, newLocation, x_dir):
         # x_dir / y_dir / direction
-        #   1   /   1   / Up-Right
-        #   1   /  -1   / Down-Right
-        #  -1   /   1   / Up Left
-        #  -1   /  -1   / Down Left
+        #   1 / 1 / Up-Right
+        #   1 / -1 / Down-Right
+        #  -1 / 1 / Up Left
+        #  -1 / -1 / Down Left
         x_distance = abs(newLocation.x - oldLocation.x)
-        validPiecesToCapture = [ "p", "b", "r", "n", "q", "k" ]
+        validPiecesToCapture = ["p", "b", "r", "n", "q", "k"]
         for i in range(1, x_distance):
-            if (not _chessBoard.board.location[oldLocation.x + i*x_dir][oldLocation.y] == ""):
+            if (not _chessBoard.board.location[oldLocation.x + i * x_dir][oldLocation.y] == ""):
                 return False
-        if (_chessBoard.board.location[newLocation.x][newLocation.y] in validPiecesToCapture or
-            _chessBoard.board.location[newLocation.x][newLocation.y] == ""):
+        if (_chessBoard.board.location[newLocation.x][newLocation.y] in validPiecesToCapture or _chessBoard.board.location[newLocation.x][newLocation.y] == ""):
             return True
 
     def check_vertical(self, _chessBoard, oldLocation, newLocation, y_dir):
         # x_dir / y_dir / direction
-        #   1   /   1   / Up-Right
-        #   1   /  -1   / Down-Right
-        #  -1   /   1   / Up Left
-        #  -1   /  -1   / Down Left
+        #   1 / 1 / Up-Right
+        #   1 / -1 / Down-Right
+        #  -1 / 1 / Up Left
+        #  -1 / -1 / Down Left
         y_distance = abs(newLocation.y - oldLocation.y)
-        validPiecesToCapture = [ "p", "b", "r", "n", "q", "k" ]
+        validPiecesToCapture = ["p", "b", "r", "n", "q", "k"]
         for i in range(1, y_distance):
-            if (not _chessBoard.board.location[oldLocation.x][oldLocation.y + i*y_dir] == ""):
+            if (not _chessBoard.board.location[oldLocation.x][oldLocation.y + i * y_dir] == ""):
                 return False
-        if (_chessBoard.board.location[newLocation.x][newLocation.y] in validPiecesToCapture or
-            _chessBoard.board.location[newLocation.x][newLocation.y] == ""):
+        if (_chessBoard.board.location[newLocation.x][newLocation.y] in validPiecesToCapture or _chessBoard.board.location[newLocation.x][newLocation.y] == ""):
             return True
 
-    def valid_move(self, piece, newFile, newRank, _chessBoard):
-        validPiecesToCapture = [ "p", "b", "r", "n", "q", "k" ]
-        myPieces = [ "P", "B", "R", "N", "Q", "K" ]
+    def valid_move(self, piece, newFile, newRank, _chessBoard, MinimaxTurn):
+        validPiecesToCapture = ["p", "b", "r", "n", "q", "k"] if MinimaxTurn > 0 else ["P", "B", "R", "N", "Q", "K"]
+        myPieces = ["P", "B", "R", "N", "Q", "K"] if MinimaxTurn > 0 else ["p", "b", "r", "n", "q", "k"]
 
+        myMoveDirection = MinimaxTurn * self.player.rank_direction
         inCheck = False
         checkPosition = point(0, 0)
 
         type = piece.type
-        oldLocation = point(self.fileToInt(piece.file), piece.rank-1)
-        newLocation = point(self.fileToInt(newFile), newRank-1)
+        oldLocation = point(self.fileToInt(piece.file), piece.rank - 1)
+        newLocation = point(self.fileToInt(newFile), newRank - 1)
         if (oldLocation.x == newLocation.x and oldLocation.y == newLocation.y):
             return False
 
@@ -263,56 +274,63 @@ class AI(BaseAI):
         if (newLocation.x < 0 or newLocation.x > 7 or newLocation.y < 0 or newLocation.y > 7):
             return False
 
-        #print("---", piece.id)
+        currentMove = move(piece, 0, newFile, newRank)
+        newBoard = chessBoard(_chessBoard, currentMove, False if MinimaxTurn > 0 else True)
+
+        oldLocation = point(self.fileToInt(piece.file), piece.rank - 1)
+        newLocation = point(self.fileToInt(newFile), newRank - 1)
+
+        capturedPiece = newBoard.board.location[newLocation.x][newLocation.y]
+        newBoard.board.location[newLocation.x][newLocation.y] = newBoard.board.location[oldLocation.x][oldLocation.y]
+        newBoard.board.location[oldLocation.x][oldLocation.y] = ""
+
+        foundPiece, _piecePoint = self.find_check_piece(newBoard, MinimaxTurn)
+        if (foundPiece == True):
+            #print("Found Piece", _chessBoard.board.location[_piecePoint.x][_piecePoint.y],"at:", _piecePoint.x, _piecePoint.y, ". Moving", piece.type, "to", newFile, newRank)
+            return False
+        
         if (not piece.actual_piece.captured):
             if (type == "Pawn"):
-                if (piece.file == newFile and newLocation.y >= 0 and newLocation.y < 8): # Moving Forward
-                    if (y_range == 3 and not ((oldLocation.x == 1 and self.color == 1) or (oldLocation.x == 6 and self.color == -1))):
+                if (piece.file == newFile and newLocation.y >= 0 and newLocation.y < 8): # Moving Forward 2 Spaces
+                    if (y_range == 3 and not ((oldLocation.y == 1 and self.color == MinimaxTurn) or (oldLocation.y == 6 and self.color == -MinimaxTurn))):
                         return False
                     elif (_chessBoard.board.location[newLocation.x][newLocation.y] == ""):
                         return True
-                elif (not piece.file == "h" and self.add_file(piece.file, 1) == newFile): # Capturing a piece
-                    if (not _chessBoard.parent == None and (_chessBoard.board.location[newLocation.x][newLocation.y] in validPiecesToCapture or  # Normal Capture
-                        (((piece.rank == 4 and self.color == -1) or (piece.rank == 3 and self.color == 1)) and # En Passant
-                         _chessBoard.board.location[oldLocation.x + 1][oldLocation.y] == "p" and _chessBoard.parent.board.location[oldLocation.x + 1][oldLocation.y + self.color] == "" and
-                         _chessBoard.parent.board.location[oldLocation.x + 1][oldLocation.y] == "" and _chessBoard.board.location[oldLocation.x + 1][oldLocation.y + self.color] == ""))):
+                if (piece.file == newFile and newLocation.y >= 0 and newLocation.y < 8): # Moving Forward 1 Space
+                    if (not y_range == 2):
+                        return False
+                    elif (_chessBoard.board.location[newLocation.x][newLocation.y] == ""):
                         return True
-                    elif (self.chessBoard[-1].parent == None):
-                        _FEN =  self.game.fen.split(" ")
+                elif (not piece.file == "h" and self.add_file(piece.file, 1) == newFile and piece.rank + myMoveDirection == newRank): # Capturing a piece to the right
+                    if (_chessBoard.board.location[newLocation.x][newLocation.y] in validPiecesToCapture):
+                        return True
+                    else: #En Passant
+                        _FEN = self.game.fen.split(" ")
                         if (not _FEN[3] == "-"):
-                           # and ((piece.rank == 4 and self.color == -1) or (piece.rank == 3 and self.color == 1)) and # En Passant
-                           #print(len(_FEN[3]))
-                           for i in range(int(len(_FEN[3])/2)):
-                               _f = self.fileToInt(_FEN[3][i*2])
-                               _r = int(_FEN[3][i*2+1])
+                           for i in range(int(len(_FEN[3]) / 2)):
+                               _f = self.fileToInt(_FEN[3][i * 2])
+                               _r = int(_FEN[3][i * 2 + 1])
                                if (oldLocation.x == _f + 1 or oldLocation.x == _f - 1):
                                    if (oldLocation.y == _r):
-                                       print("En Passant Right")
                                        return True
                         else:
                             return False
-                elif (not piece.file == "a" and self.add_file(piece.file, -1) == newFile): # Capturing a piece
-                    if (not _chessBoard.parent == None and (_chessBoard.board.location[newLocation.x][newLocation.y] in validPiecesToCapture or  # Normal Capture
-                        (((piece.rank == 4 and self.color == -1) or (piece.rank == 3 and self.color == 1)) and # En Passant
-                         _chessBoard.board.location[oldLocation.x - 1][oldLocation.y] == "p" and _chessBoard.parent.board.location[oldLocation.x - 1][oldLocation.y + self.color] == "" and
-                         _chessBoard.parent.board.location[oldLocation.x - 1][oldLocation.y] == "" and _chessBoard.board.location[oldLocation.x - 1][oldLocation.y + self.color] == ""))):
+                elif (not piece.file == "a" and self.add_file(piece.file, -1) == newFile and piece.rank + myMoveDirection == newRank): # Capturing a piece to the left
+                    if (_chessBoard.board.location[newLocation.x][newLocation.y] in validPiecesToCapture):
                         return True
-                    elif (self.chessBoard[-1].parent == None):
-                        _FEN =  self.game.fen.split(" ")
+                    else: #En Passant
+                        _FEN = self.game.fen.split(" ")
                         if (not _FEN[3] == "-"):
-                           # and ((piece.rank == 4 and self.color == -1) or (piece.rank == 3 and self.color == 1)) and # En Passant
-                           for i in range(int(len(_FEN[3])/2)):
-                               _f = self.fileToInt(_FEN[3][i*2])
-                               _r = int(_FEN[3][i*2+1])
+                           for i in range(int(len(_FEN[3]) / 2)):
+                               _f = self.fileToInt(_FEN[3][i * 2])
+                               _r = int(_FEN[3][i * 2 + 1])
                                if (oldLocation.x == _f + 1 or oldLocation.x == _f - 1):
                                    if (oldLocation.y == _r):
-                                       print("En Passant Left")
                                        return True
                         else:
                             return False
             elif (type == "Knight"):
-                if (not _chessBoard.board.location[newLocation.x][newLocation.y] in myPieces and 
-                    (_chessBoard.board.location[newLocation.x][newLocation.y] in validPiecesToCapture or _chessBoard.board.location[newLocation.x][newLocation.y] == "")):
+                if (not _chessBoard.board.location[newLocation.x][newLocation.y] in myPieces and (_chessBoard.board.location[newLocation.x][newLocation.y] in validPiecesToCapture or _chessBoard.board.location[newLocation.x][newLocation.y] == "")):
                     return True
             elif (type == "Bishop"):
                 if (newLocation.x >= 0 and newLocation.x < 8 and newLocation.y >= 0 and newLocation.y < 8):
@@ -358,9 +376,9 @@ class AI(BaseAI):
                 if (newLocation.x >= 0 and newLocation.x < 8 and newLocation.y >= 0 and newLocation.y < 8):
                     x_distance = (newLocation.x - oldLocation.x)
                     y_distance = (newLocation.y - oldLocation.y)
-                    if (newLocation.y == oldLocation.y and  x_distance == 1): # Right Move
+                    if (newLocation.y == oldLocation.y and x_distance == 1): # Right Move
                         return self.check_horizontal(_chessBoard, oldLocation, newLocation, 1)
-                    elif (newLocation.y == oldLocation.y and  x_distance == -1): # Left Move
+                    elif (newLocation.y == oldLocation.y and x_distance == -1): # Left Move
                         return self.check_horizontal(_chessBoard, oldLocation, newLocation, -1)
                     elif (newLocation.x == oldLocation.x and y_distance == 1): # Upwards Move
                         return self.check_vertical(_chessBoard, oldLocation, newLocation, 1)
@@ -374,28 +392,26 @@ class AI(BaseAI):
                         return self.check_diagonal(_chessBoard, oldLocation, newLocation, -1, 1)
                     elif (x_distance == 1 and y_distance == 1): # Top Right Move
                         return self.check_diagonal(_chessBoard, oldLocation, newLocation, 1, 1)
-                    elif (x_distance == 2 and y_distance == 0 and ((piece.rank == 0 and self.color == 1) or (piece.rank == 8 and self.color == -1)) and 
-                          _chessBoard.board.location[7][newLocation.y] == "R"): # Castling Right
+                    elif (x_distance == 2 and y_distance == 0 and ((piece.rank == 0 and self.color == MinimaxTurn) or (piece.rank == 8 and self.color == -MinimaxTurn)) and _chessBoard.board.location[7][newLocation.y] == "R"): # Castling Right
                         for i in range(1, 3):
                             if (not _chessBoard.board.location[oldLocation.x + i][oldLocation.y] == ""):
                                 return False
                         return True
-                    elif (x_distance == -2 and y_distance == 0 and ((piece.rank == 0 and self.color == 1) or (piece.rank == 8 and self.color == -1)) and 
-                          _chessBoard.board.location[0][newLocation.y] == "R"): # Castling Left
+                    elif (x_distance == -2 and y_distance == 0 and ((piece.rank == 0 and self.color == MinimaxTurn) or (piece.rank == 8 and self.color == -MinimaxTurn)) and _chessBoard.board.location[0][newLocation.y] == "R"): # Castling Left
                         for i in range(1, 4):
                             if (not _chessBoard.board.location[oldLocation.x - i][oldLocation.y] == ""):
                                 return False
                         return True
         return False
 
-    def fileToInt(self, file = "a"):
-        files = [ "a", "b", "c", "d", "e", "f", "g", "h" ]
+    def fileToInt(self, file="a"):
+        files = ["a", "b", "c", "d", "e", "f", "g", "h"]
         return files.index(file)
-    def intToFile(self, file = "a"):
-        files = [ "a", "b", "c", "d", "e", "f", "g", "h" ]
+    def intToFile(self, file="a"):
+        files = ["a", "b", "c", "d", "e", "f", "g", "h"]
         return files[file]
     def add_file(self, file, amount):
-        files = [ "a", "b", "c", "d", "e", "f", "g", "h" ]
+        files = ["a", "b", "c", "d", "e", "f", "g", "h"]
         _f = files.index(file)
         if (_f + amount > 7):
             return "h"
@@ -408,87 +424,112 @@ class AI(BaseAI):
         enemyPoints = 0
         myPoints = 0
 
+        pawn = "p" if MinimaxTurn > 0 else "P"
+        bishop = "b" if MinimaxTurn > 0 else "B"
+        rook = "r" if MinimaxTurn > 0 else "R"
+        knight = "n" if MinimaxTurn > 0 else "N"
+        queen = "q" if MinimaxTurn > 0 else "Q"
+        king = "k" if MinimaxTurn > 0 else "K"
+
+        myPawn = "P" if MinimaxTurn > 0 else "p"
+        myBishop = "B" if MinimaxTurn > 0 else "b"
+        myRook = "R" if MinimaxTurn > 0 else "r"
+        myKnight = "N" if MinimaxTurn > 0 else "n"
+        myQueen = "Q" if MinimaxTurn > 0 else "q"
+        myKing = "K" if MinimaxTurn > 0 else "k"
+
+        myMoveDirection = MinimaxTurn * self.player.rank_direction
         currentMove = move(actionObj, actionNum, newFile, newRank)
-        newBoard = chessBoard(_chessBoard, currentMove, False if MinimaxTurn > 0 else True)
+        newBoard = chessBoard(_chessBoard, currentMove, True)
+        newBoard.currentMove.actionObj.has_moved = True
 
         oldLocation = point(self.fileToInt(actionObj.file), actionObj.rank - 1)
         newLocation = point(self.fileToInt(newFile), newRank - 1)
+
         capturedPiece = newBoard.board.location[newLocation.x][newLocation.y]
         newBoard.board.location[newLocation.x][newLocation.y] = newBoard.board.location[oldLocation.x][oldLocation.y]
         newBoard.board.location[oldLocation.x][oldLocation.y] = ""
 
-        enemyPoints = 100*len(newBoard.enemyPawn) + 300*len(newBoard.enemyBishop) + 300*len(newBoard.enemyKnight) + 500*len(newBoard.enemyRook) + 900*len(newBoard.enemyQueen)
-        myPoints = 100*len(newBoard.pawn) + 300*len(newBoard.bishop) + 300*len(newBoard.knight) + 500*len(newBoard.rook) + 900*len(newBoard.queen)
+        enemyPoints = 100 * len(newBoard.enemyPawn) + 300 * len(newBoard.enemyBishop) + 300 * len(newBoard.enemyKnight) + 500 * len(newBoard.enemyRook) + 900 * len(newBoard.enemyQueen)
+        myPoints = 100 * len(newBoard.pawn) + 300 * len(newBoard.bishop) + 300 * len(newBoard.knight) + 500 * len(newBoard.rook) + 900 * len(newBoard.queen)
 
-        if (capturedPiece == ""):
-            myPoints -= 350
-        elif (capturedPiece == "P"):
+        if (capturedPiece == pawn):
             enemyPoints -= 100
             myPoints += 100
-        elif (capturedPiece == "B" or capturedPiece == "N"):
+        elif (capturedPiece == bishop or capturedPiece == knight):
             enemyPoints -= 300
-        elif (capturedPiece == "R"):
+            myPoints += 300
+        elif (capturedPiece == rook):
             enemyPoints -= 500
-            myPoints += 1000
-        elif (capturedPiece == "Q"):
+            myPoints += 500
+        elif (capturedPiece == queen):
             enemyPoints -= 900
-            myPoints += 5000
+            myPoints += 900
 
-        if (actionObj.type == "Pawn"):
-            if (abs(oldLocation.x - newLocation.x) == 2):
-                myPoints += 225
-            if ((self.player.rank_direction == -1 and actionObj.rank == 2) or
-                (self.player.rank_direction == 1 and actionObj.rank == 7)):
-                myPoints += 2000
-        if (oldLocation.y < 7 and oldLocation.y > 0 and
-            newBoard.board.location[oldLocation.x][oldLocation.y - self.player.rank_direction] == "Q"):
+        if (oldLocation.y < 7 and oldLocation.y > 0 and newBoard.board.location[oldLocation.x][oldLocation.y - myMoveDirection] == myQueen):
             myPoints -= 1200
-        if (oldLocation.y < 7 and oldLocation.y > 0 and
-            newBoard.board.location[oldLocation.x][oldLocation.y - self.player.rank_direction] == "K"):
-            myPoints -= 1500
+        if (oldLocation.y < 7 and oldLocation.y > 0 and newBoard.board.location[oldLocation.x][oldLocation.y - myMoveDirection] == myKing):
+            myPoints -= 1200
+        if (oldLocation.y < 7 and oldLocation.y > 0 and oldLocation.x > 0 and newBoard.board.location[oldLocation.x - 1][oldLocation.y - myMoveDirection] == myKing):
+            myPoints -= 1200
+        if (oldLocation.y < 7 and oldLocation.y > 0 and oldLocation.x < 7 and newBoard.board.location[oldLocation.x + 1][oldLocation.y - myMoveDirection] == myQueen):
+            myPoints -= 1200
+        if (oldLocation.y < 7 and oldLocation.y > 0 and oldLocation.x > 0 and oldLocation.x < 7 and 
+            (newBoard.board.location[oldLocation.x + 1][oldLocation.y - myMoveDirection] == myBishop or newBoard.board.location[oldLocation.x - 1][oldLocation.y - myMoveDirection] == myBishop)):
+            myPoints += 300
 
-        #if (len(self.myMoves) > 0 and self.myMoves[len(self.myMoves)-1].actionObj.id == actionObj.id):
+        #if (len(self.myMoves) > 0 and
+        #self.myMoves[len(self.myMoves)-1].actionObj.id == actionObj.id):
         #    myPoints -= 200
 
         #if (self.numMoves < 12):
         if (actionObj.type == "Pawn"):
-            myPoints += random.randrange(20, 50)
-            #if (actionObj.type != "Pawn" and (abs(oldLocation.x - newLocation.x) == 1 or abs(oldLocation.y - newLocation.y) == 1)):
-            #    myPoints -= 350
-        elif (actionObj.type == "King"):
-            myPoints -= 2000
+            myPoints += random.randrange(50, 100)
+            if (abs(oldLocation.x - newLocation.x) == 2):
+                myPoints += 200
+            if ((self.player.rank_direction == -1 and actionObj.rank == 2) or (self.player.rank_direction == 1 and actionObj.rank == 7)):
+                myPoints += 1000
+        elif (actionObj.type == "King" and capturedPiece == ""):
+            myPoints -= 1500
+        elif (actionObj.type == "King" and not capturedPiece == ""):
+            myPoints -= 300
         elif (actionObj.type == "Queen"):
-            myPoints += 150
+            myPoints += 50
 
         if (actionObj.type == "Rook" or actionObj.type == "Queen"):
-            if (newLocation.y+1 == newBoard.enemyKing[0].rank or self.intToFile(newLocation.x) == newBoard.enemyKing[0].file):
-                myPoints += 300
+            if (newLocation.y + 1 == newBoard.enemyKing[0].rank or self.intToFile(newLocation.x) == newBoard.enemyKing[0].file):
+                myPoints += 800
         if (actionObj.type == "Bishop" or actionObj.type == "Queen"):
-            for i in range(8):
-                if (newLocation.x+i < 8 and newLocation.y+i < 8):
-                    if ((newLocation.y+1+i == newBoard.enemyKing[0].rank) and (self.intToFile(newLocation.x+i) == newBoard.enemyKing[0].file)):
-                        myPoints += 300 + 650 if actionObj.type == "Bishop" else 0
-                if (newLocation.x+i < 8 and newLocation.y-i >= 0):
-                    if ((newLocation.y+1-i == newBoard.enemyKing[0].rank) and (self.intToFile(newLocation.x+i) == newBoard.enemyKing[0].file)):
-                        myPoints += 300 + 650 if actionObj.type == "Bishop" else 0
-                if (newLocation.x-i >= 0 and newLocation.y-i >= 0):
-                    if ((newLocation.y+1-i == newBoard.enemyKing[0].rank) and (self.intToFile(newLocation.x-i) == newBoard.enemyKing[0].file)):
-                        myPoints += 300 + 650 if actionObj.type == "Bishop" else 0
-                if (newLocation.x-i >= 0 and newLocation.y+i < 8):
-                    if ((newLocation.y+1+i == newBoard.enemyKing[0].rank) and (self.intToFile(newLocation.x-i) == newBoard.enemyKing[0].file)):
-                        myPoints += 300 + 650 if actionObj.type == "Bishop" else 0
+            for i in range(1, 8):
+                if (newLocation.x + i < 8 and newLocation.y + i < 8):
+                    if ((newLocation.y + 1 + i == newBoard.enemyKing[0].rank) and (self.intToFile(newLocation.x + i) == newBoard.enemyKing[0].file)):
+                        myPoints += 600 + 200 if actionObj.type == "Bishop" else 0
+                if (newLocation.x + i < 8 and newLocation.y - i >= 0):
+                    if ((newLocation.y + 1 - i == newBoard.enemyKing[0].rank) and (self.intToFile(newLocation.x + i) == newBoard.enemyKing[0].file)):
+                        myPoints += 600 + 200 if actionObj.type == "Bishop" else 0
+                if (newLocation.x - i >= 0 and newLocation.y - i >= 0):
+                    if ((newLocation.y + 1 - i == newBoard.enemyKing[0].rank) and (self.intToFile(newLocation.x - i) == newBoard.enemyKing[0].file)):
+                        myPoints += 600 + 200 if actionObj.type == "Bishop" else 0
+                if (newLocation.x - i >= 0 and newLocation.y + i < 8):
+                    if ((newLocation.y + 1 + i == newBoard.enemyKing[0].rank) and (self.intToFile(newLocation.x - i) == newBoard.enemyKing[0].file)):
+                        myPoints += 600 + 200 if actionObj.type == "Bishop" else 0
+
+        foundPiece, _piecePoint = self.find_check_piece(newBoard, -MinimaxTurn) # If the other play would be in check
+        if (foundPiece):
+            myPoints += 8000
+
 
         #if (MinimaxTurn > 0):
-        heuristicValue = myPoints - enemyPoints
+        heuristicValue = myPoints - enemyPoints + random.randrange(10, 220)
         #else:
         #    heuristicValue = enemyPoints - myPoints
         
-        return newBoard, heuristicValue*MinimaxTurn
+        return newBoard, heuristicValue * MinimaxTurn
 
     def makeLastMove(self):
         numPieces = len(self.game.pieces)
 
-        newBoard = chessBoard()
+        newBoard = chessBoard(None, None)
         if (len(self.chessBoard) > 0):
             newBoard.parent = self.chessBoard[-1]
 
@@ -497,295 +538,260 @@ class AI(BaseAI):
         for i in range(numPieces):
             if (not self.game.pieces[i].owner.id == self.player.id): # If piece doesn't belong to me
                 if (self.game.pieces[i].type == "Pawn"):
-                    newBoard.board.location[self.fileToInt(self.game.pieces[i].file)][self.game.pieces[i].rank-1] = "p"
+                    newBoard.board.location[self.fileToInt(self.game.pieces[i].file)][self.game.pieces[i].rank - 1] = "p"
                 elif (self.game.pieces[i].type == "Bishop"):
-                    newBoard.board.location[self.fileToInt(self.game.pieces[i].file)][self.game.pieces[i].rank-1] = "b"
+                    newBoard.board.location[self.fileToInt(self.game.pieces[i].file)][self.game.pieces[i].rank - 1] = "b"
                 elif (self.game.pieces[i].type == "Rook"):
-                    newBoard.board.location[self.fileToInt(self.game.pieces[i].file)][self.game.pieces[i].rank-1] = "r"
+                    newBoard.board.location[self.fileToInt(self.game.pieces[i].file)][self.game.pieces[i].rank - 1] = "r"
                 elif (self.game.pieces[i].type == "Knight"):
-                    newBoard.board.location[self.fileToInt(self.game.pieces[i].file)][self.game.pieces[i].rank-1] = "n"
+                    newBoard.board.location[self.fileToInt(self.game.pieces[i].file)][self.game.pieces[i].rank - 1] = "n"
                 elif (self.game.pieces[i].type == "Queen"):
-                    newBoard.board.location[self.fileToInt(self.game.pieces[i].file)][self.game.pieces[i].rank-1] = "q"
+                    newBoard.board.location[self.fileToInt(self.game.pieces[i].file)][self.game.pieces[i].rank - 1] = "q"
                 elif (self.game.pieces[i].type == "King"):
-                    newBoard.board.location[self.fileToInt(self.game.pieces[i].file)][self.game.pieces[i].rank-1] = "k"
+                    newBoard.board.location[self.fileToInt(self.game.pieces[i].file)][self.game.pieces[i].rank - 1] = "k"
             elif (self.game.pieces[i].owner.id == self.player.id): # If piece belongs to me
                 if (self.game.pieces[i].type == "Pawn"):
-                    newBoard.board.location[self.fileToInt(self.game.pieces[i].file)][self.game.pieces[i].rank-1] = "P"
+                    newBoard.board.location[self.fileToInt(self.game.pieces[i].file)][self.game.pieces[i].rank - 1] = "P"
                 elif (self.game.pieces[i].type == "Bishop"):
-                    newBoard.board.location[self.fileToInt(self.game.pieces[i].file)][self.game.pieces[i].rank-1] = "B"
+                    newBoard.board.location[self.fileToInt(self.game.pieces[i].file)][self.game.pieces[i].rank - 1] = "B"
                 elif (self.game.pieces[i].type == "Rook"):
-                    newBoard.board.location[self.fileToInt(self.game.pieces[i].file)][self.game.pieces[i].rank-1] = "R"
+                    newBoard.board.location[self.fileToInt(self.game.pieces[i].file)][self.game.pieces[i].rank - 1] = "R"
                 elif (self.game.pieces[i].type == "Knight"):
-                    newBoard.board.location[self.fileToInt(self.game.pieces[i].file)][self.game.pieces[i].rank-1] = "N"
+                    newBoard.board.location[self.fileToInt(self.game.pieces[i].file)][self.game.pieces[i].rank - 1] = "N"
                 elif (self.game.pieces[i].type == "Queen"):
-                    newBoard.board.location[self.fileToInt(self.game.pieces[i].file)][self.game.pieces[i].rank-1] = "Q"
+                    newBoard.board.location[self.fileToInt(self.game.pieces[i].file)][self.game.pieces[i].rank - 1] = "Q"
                 elif (self.game.pieces[i].type == "King"):
-                    newBoard.board.location[self.fileToInt(self.game.pieces[i].file)][self.game.pieces[i].rank-1] = "K"
+                    newBoard.board.location[self.fileToInt(self.game.pieces[i].file)][self.game.pieces[i].rank - 1] = "K"
         #_chessBoard.board.location.reverse()
 
     def getPromotionType(self, _chessBoard):
-        promotionPoint = point(self.fileToInt(_chessBoard.currentMove.newFile), _chessBoard.currentMove.newRank - 1)
+        #promotionPoint = point(self.fileToInt(_chessBoard.currentMove.newFile), _chessBoard.currentMove.newRank - 1)
 
         if (len(_chessBoard.queen) == 0):
             return "Queen"
-        elif (self.player.rank_direction > 0): # White Player
-            if (promotionPoint.x > 0 and _chessBoard.board.location[promotionPoint.x-1][promotionPoint.y-2] == "k"):
-                return "Knight"
-            elif (promotionPoint.x < 7 and _chessBoard.board.location[promotionPoint.x+1][promotionPoint.y-2] == "k"):
-                return "Knight"
+        #elif (self.player.rank_direction > 0): # White Player
+        #    if (promotionPoint.x > 0 and _chessBoard.board.location[promotionPoint.x - 1][promotionPoint.y - 2] == "k"):
+        #        return "Knight"
+        #    elif (promotionPoint.x < 7 and _chessBoard.board.location[promotionPoint.x + 1][promotionPoint.y - 2] == "k"):
+        #        return "Knight"
         return "Queen"
 
-    def getMoves(self, _chessBoard, currentDepth, depthLimit, MinimaxTurn):
+    def getMoves(self, _chessBoard, currentDepth, maxDepth, MinimaxTurn, alpha, beta, startTime):
         currentPossibleMoves = pQueue()
-        for i in range(len(_chessBoard.pawn if MinimaxTurn > 0 else _chessBoard.enemyPawn)): # Check PAWN moves
-            _pawn = _chessBoard.pawn[i] if MinimaxTurn > 0 else _chessBoard.enemyPawn[i]
-            if (not _pawn.actual_piece.captured): # If not captured
-                if (not _pawn.actual_piece.has_moved): # If hasn't moved from starting position
-                    if (self.valid_move(_pawn, _pawn.file, _pawn.rank + 2*self.color, _chessBoard)):
-                        thisMove, h = self.create_move(_pawn, i, _pawn.file, _pawn.rank + 2*self.color, _chessBoard, MinimaxTurn)
-                        if (currentDepth < depthLimit):
-                            h = self.getMoves(thisMove, currentDepth+1, depthLimit, MinimaxTurn*-1)
+        myMoveDirection = MinimaxTurn * self.player.rank_direction
+        for i in range(len(_chessBoard.myPieces)):
+            _piece = _chessBoard.myPieces[i]
+            if (not _piece.captured):
+                if (_piece.type == "Pawn"):
+                    if (not _piece.has_moved):
+                        if (self.valid_move(_piece, _piece.file, _piece.rank + 2 * myMoveDirection, _chessBoard, MinimaxTurn)):
+                            thisMove, h = self.create_move(_piece, i, _piece.file, _piece.rank + 2 * myMoveDirection, _chessBoard, -MinimaxTurn)
+                            if (currentDepth < maxDepth):
+                                h = self.getMoves(thisMove, currentDepth + 1, maxDepth, -MinimaxTurn, alpha, beta, startTime)
+                            currentPossibleMoves.put(thisMove, h)
+                            if (MinimaxTurn > 0): # Max turn
+                                if (h > beta): # PRUNE, Fail High
+                                    item, weight = currentPossibleMoves.pop_back()
+                                    return weight
+                                elif (h > alpha):
+                                    alpha = h
+                                else:
+                                    pass # Fail Low
+                            elif (MinimaxTurn < 0): # Min turn
+                                if (h < alpha): # PRUNE, Fail Low
+                                    item, weight = currentPossibleMoves.pop()
+                                    return weight
+                                elif (h < beta):
+                                    beta = h
+                                else:
+                                    pass # Fail High
+                    if (self.valid_move(_piece, _piece.file, _piece.rank + 1 * myMoveDirection, _chessBoard, MinimaxTurn)):
+                        thisMove, h = self.create_move(_piece, i, _piece.file, _piece.rank + 1 * myMoveDirection, _chessBoard, -MinimaxTurn)
+                        if (currentDepth < maxDepth):
+                            h = self.getMoves(thisMove, currentDepth + 1, maxDepth, -MinimaxTurn, alpha, beta, startTime)
                         currentPossibleMoves.put(thisMove, h)
-                if (self.valid_move(_pawn, _pawn.file, _pawn.rank + 1*self.color, _chessBoard)):
-                    thisMove, h = self.create_move(_pawn, i, _pawn.file, _pawn.rank + 1*self.color, _chessBoard, MinimaxTurn)
-                    if (currentDepth < depthLimit):
-                        h = self.getMoves(thisMove, currentDepth+1, depthLimit, MinimaxTurn*-1)
-                    currentPossibleMoves.put(thisMove, h)
-                if (not _pawn.file == "h" and self.valid_move(_pawn, self.add_file(_pawn.file, 1), _pawn.rank + 1*self.color, _chessBoard)):
-                    thisMove, h = self.create_move(_pawn, i, self.add_file(_pawn.file, 1), _pawn.rank + 1*self.color, _chessBoard, MinimaxTurn)
-                    if (currentDepth < depthLimit):
-                        h = self.getMoves(thisMove, currentDepth+1, depthLimit, MinimaxTurn*-1)
-                    currentPossibleMoves.put(thisMove, h)
-                if (not _pawn.file == "a" and self.valid_move(_pawn, self.add_file(_pawn.file, -1), _pawn.rank + 1*self.color, _chessBoard)):
-                    thisMove, h = self.create_move(_pawn, i, self.add_file(_pawn.file, -1), _pawn.rank + 1*self.color, _chessBoard, MinimaxTurn)
-                    if (currentDepth < depthLimit):
-                        h = self.getMoves(thisMove, currentDepth+1, depthLimit, MinimaxTurn*-1)
-                    currentPossibleMoves.put(thisMove, h)
-        for i in range(len(_chessBoard.knight if MinimaxTurn > 0 else _chessBoard.enemyKnight)): # Check KNIGHT moves
-            _knight = _chessBoard.knight[i] if MinimaxTurn > 0 else _chessBoard.enemyKnight[i]
-            if (not _knight.actual_piece.captured): # If not captured
-                if (not _knight.file == "h" and _knight.rank > 2 and self.valid_move(_knight, self.add_file(_knight.file, 1), _knight.rank - 2, _chessBoard)):
-                    thisMove, h = self.create_move(_knight, i, self.add_file(_knight.file, 1), _knight.rank - 2, _chessBoard, MinimaxTurn)
-                    if (currentDepth < depthLimit):
-                        h = self.getMoves(thisMove, currentDepth+1, depthLimit, MinimaxTurn*-1)
-                    currentPossibleMoves.put(thisMove, h)
-                if (not _knight.file == "a" and _knight.rank > 2 and self.valid_move(_knight, self.add_file(_knight.file, -1), _knight.rank - 2, _chessBoard)):
-                    thisMove, h = self.create_move(_knight, i, self.add_file(_knight.file, -1), _knight.rank - 2, _chessBoard, MinimaxTurn)
-                    if (currentDepth < depthLimit):
-                        h = self.getMoves(thisMove, currentDepth+1, depthLimit, MinimaxTurn*-1)
-                    currentPossibleMoves.put(thisMove, h)
-                if (not _knight.file == "a" and not _knight.file == "b" and _knight.rank > 1 and self.valid_move(_knight, self.add_file(_knight.file, -2), _knight.rank - 1, _chessBoard)):
-                    thisMove, h = self.create_move(_knight, i, self.add_file(_knight.file, -2), _knight.rank - 1, _chessBoard, MinimaxTurn)
-                    if (currentDepth < depthLimit):
-                        h = self.getMoves(thisMove, currentDepth+1, depthLimit, MinimaxTurn*-1)
-                    currentPossibleMoves.put(thisMove, h)
-                if (not _knight.file == "g" and not _knight.file == "h" and _knight.rank > 1 and self.valid_move(_knight, self.add_file(_knight.file, 2), _knight.rank - 1, _chessBoard)):
-                    thisMove, h = self.create_move(_knight, i, self.add_file(_knight.file, 2), _knight.rank - 1, _chessBoard, MinimaxTurn)
-                    if (currentDepth < depthLimit):
-                        h = self.getMoves(thisMove, currentDepth+1, depthLimit, MinimaxTurn*-1)
-                    currentPossibleMoves.put(thisMove, h)
-                if (not _knight.file == "h" and _knight.rank < 7 and self.valid_move(_knight, self.add_file(_knight.file, 1), _knight.rank + 2, _chessBoard)):
-                    thisMove, h = self.create_move(_knight, i, self.add_file(_knight.file, 1), _knight.rank + 2, _chessBoard, MinimaxTurn)
-                    if (currentDepth < depthLimit):
-                        h = self.getMoves(thisMove, currentDepth+1, depthLimit, MinimaxTurn*-1)
-                    currentPossibleMoves.put(thisMove, h)
-                if (not _knight.file == "a" and _knight.rank < 7 and self.valid_move(_knight, self.add_file(_knight.file, -1), _knight.rank + 2, _chessBoard)):
-                    thisMove, h = self.create_move(_knight, i, self.add_file(_knight.file, -1), _knight.rank + 2, _chessBoard, MinimaxTurn)
-                    if (currentDepth < depthLimit):
-                        h = self.getMoves(thisMove, currentDepth+1, depthLimit, MinimaxTurn*-1)
-                    currentPossibleMoves.put(thisMove, h)
-                if (not _knight.file == "a" and not _knight.file == "b" and _knight.rank <= 8 and self.valid_move(_knight, self.add_file(_knight.file, -2), _knight.rank + 1, _chessBoard)):
-                    thisMove, h = self.create_move(_knight, i, self.add_file(_knight.file, -2), _knight.rank + 1, _chessBoard, MinimaxTurn)
-                    if (currentDepth < depthLimit):
-                        h = self.getMoves(thisMove, currentDepth+1, depthLimit, MinimaxTurn*-1)
-                    currentPossibleMoves.put(thisMove, h)
-                if (not _knight.file == "g" and not _knight.file == "h" and _knight.rank <= 8 and self.valid_move(_knight, self.add_file(_knight.file, 2), _knight.rank + 1, _chessBoard)):
-                    thisMove, h = self.create_move(_knight, i, self.add_file(_knight.file, 2), _knight.rank + 1, _chessBoard, MinimaxTurn)
-                    if (currentDepth < depthLimit):
-                        h = self.getMoves(thisMove, currentDepth+1, depthLimit, MinimaxTurn*-1)
-                    currentPossibleMoves.put(thisMove, h)
-        for i in range(len(_chessBoard.bishop if MinimaxTurn > 0 else _chessBoard.enemyBishop)): # Check BISHOP moves
-            _bishop = _chessBoard.bishop[i] if MinimaxTurn > 0 else _chessBoard.enemyBishop[i]
-            if (not _bishop.actual_piece.captured): # If not captured
-                for k in range(8):
-                    if (self.fileToInt(_bishop.file) + k < 8 and _bishop.rank - k >= 0): # Bottom Right move
-                        if (self.valid_move(_bishop, self.add_file(_bishop.file, k), _bishop.rank - k, _chessBoard)):
-                            thisMove, h = self.create_move(_bishop, i, self.add_file(_bishop.file, k), _bishop.rank - k, _chessBoard, MinimaxTurn)
-                            if (currentDepth < depthLimit):
-                                h = self.getMoves(thisMove, currentDepth+1, depthLimit, MinimaxTurn*-1)
-                            currentPossibleMoves.put(thisMove, h)
-                    if (self.fileToInt(_bishop.file) - k >= 0 and _bishop.rank - k >= 0): # Bottom Left move
-                        if (self.valid_move(_bishop, self.add_file(_bishop.file, -k), _bishop.rank - k, _chessBoard)):
-                            thisMove, h = self.create_move(_bishop, i, self.add_file(_bishop.file, -k), _bishop.rank - k, _chessBoard, MinimaxTurn)
-                            if (currentDepth < depthLimit):
-                                h = self.getMoves(thisMove, currentDepth+1, depthLimit, MinimaxTurn*-1)
-                            currentPossibleMoves.put(thisMove, h)
-                    if (self.fileToInt(_bishop.file) - k >= 0 and _bishop.rank + k <= 8): # Top Left move
-                        if (self.valid_move(_bishop, self.add_file(_bishop.file, -k), _bishop.rank + k, _chessBoard)):
-                            thisMove, h = self.create_move(_bishop, i, self.add_file(_bishop.file, -k), _bishop.rank + k, _chessBoard, MinimaxTurn)
-                            if (currentDepth < depthLimit):
-                                h = self.getMoves(thisMove, currentDepth+1, depthLimit, MinimaxTurn*-1)
-                            currentPossibleMoves.put(thisMove, h)
-                    if (self.fileToInt(_bishop.file) + k < 8 and _bishop.rank + k <= 8): # Top Right move
-                        if (self.valid_move(_bishop, self.add_file(_bishop.file, k), _bishop.rank + k, _chessBoard)):
-                            thisMove, h = self.create_move(_bishop, i, self.add_file(_bishop.file, k), _bishop.rank + k, _chessBoard, MinimaxTurn)
-                            if (currentDepth < depthLimit):
-                                h = self.getMoves(thisMove, currentDepth+1, depthLimit, MinimaxTurn*-1)
-                            currentPossibleMoves.put(thisMove, h)
-        for i in range(len(_chessBoard.rook if MinimaxTurn > 0 else _chessBoard.enemyRook)): # Check ROOK moves
-            _rook = _chessBoard.rook[i] if MinimaxTurn > 0 else _chessBoard.enemyRook[i]
-            if (not _rook.actual_piece.captured): # If not captured
-                for k in range(8):
-                    if (self.fileToInt(_rook.file) + k < 8): # Right move
-                        if (self.valid_move(_rook, self.add_file(_rook.file, k), _rook.rank, _chessBoard)):
-                            thisMove, h = self.create_move(_rook, i, self.add_file(_rook.file, k), _rook.rank, _chessBoard, MinimaxTurn)
-                            if (currentDepth < depthLimit):
-                                h = self.getMoves(thisMove, currentDepth+1, depthLimit, MinimaxTurn*-1)
-                            currentPossibleMoves.put(thisMove, h)
-                    if (self.fileToInt(_rook.file) + k >= 0): # Left move
-                        if (self.valid_move(_rook, self.add_file(_rook.file, -k), _rook.rank, _chessBoard)):
-                            thisMove, h = self.create_move(_rook, i, self.add_file(_rook.file, -k), _rook.rank, _chessBoard, MinimaxTurn)
-                            if (currentDepth < depthLimit):
-                                h = self.getMoves(thisMove, currentDepth+1, depthLimit, MinimaxTurn*-1)
-                            currentPossibleMoves.put(thisMove, h)
-                    if (_rook.rank + k <= 8): # Upwards move
-                        if (self.valid_move(_rook, _rook.file, _rook.rank + k, _chessBoard)):
-                            thisMove, h = self.create_move(_rook, i, _rook.file, _rook.rank + k, _chessBoard, MinimaxTurn)
-                            if (currentDepth < depthLimit):
-                                h = self.getMoves(thisMove, currentDepth+1, depthLimit, MinimaxTurn*-1)
-                            currentPossibleMoves.put(thisMove, h)
-                    if (_rook.rank - k >= 0): # Downwards move
-                        if (self.valid_move(_rook, _rook.file, _rook.rank - k, _chessBoard)):
-                            thisMove, h = self.create_move(_rook, i, _rook.file, _rook.rank - k, _chessBoard, MinimaxTurn)
-                            if (currentDepth < depthLimit):
-                                h = self.getMoves(thisMove, currentDepth+1, depthLimit, MinimaxTurn*-1)
-                            currentPossibleMoves.put(thisMove, h)
-        for i in range(len(_chessBoard.queen if MinimaxTurn > 0 else _chessBoard.enemyQueen)): # Check QUEEN moves
-            _queen = _chessBoard.queen[i] if MinimaxTurn > 0 else _chessBoard.enemyQueen[i]
-            if (not _queen.actual_piece.captured): # If not captured
-                for k in range(8):
-                    if (self.fileToInt(_queen.file) + k < 8 and _queen.rank - k >= 0): # Bottom Right move
-                        if (self.valid_move(_queen, self.add_file(_queen.file, k), _queen.rank - k, _chessBoard)):
-                            thisMove, h = self.create_move(_queen, i, self.add_file(_queen.file, k), _queen.rank - k, _chessBoard, MinimaxTurn)
-                            if (currentDepth < depthLimit):
-                                h = self.getMoves(thisMove, currentDepth+1, depthLimit, MinimaxTurn*-1)
-                            currentPossibleMoves.put(thisMove, h)
-                    if (self.fileToInt(_queen.file) - k >= 0 and _queen.rank - k >= 0): # Bottom Left move
-                        if (self.valid_move(_queen, self.add_file(_queen.file, -k), _queen.rank - k, _chessBoard)):
-                            thisMove, h = self.create_move(_queen, i, self.add_file(_queen.file, -k), _queen.rank - k, _chessBoard, MinimaxTurn)
-                            if (currentDepth < depthLimit):
-                                h = self.getMoves(thisMove, currentDepth+1, depthLimit, MinimaxTurn*-1)
-                            currentPossibleMoves.put(thisMove, h)
-                    if (self.fileToInt(_queen.file) - k >= 0 and _queen.rank + k <= 8): # Top Left move
-                        if (self.valid_move(_queen, self.add_file(_queen.file, -k), _queen.rank + k, _chessBoard)):
-                            thisMove, h = self.create_move(_queen, i, self.add_file(_queen.file, -k), _queen.rank + k, _chessBoard, MinimaxTurn)
-                            if (currentDepth < depthLimit):
-                                h = self.getMoves(thisMove, currentDepth+1, depthLimit, MinimaxTurn*-1)
-                            currentPossibleMoves.put(thisMove, h)
-                    if (self.fileToInt(_queen.file) + k < 8 and _queen.rank + k <= 8): # Top Right move
-                        if (self.valid_move(_queen, self.add_file(_queen.file, k), _queen.rank + k, _chessBoard)):
-                            thisMove, h = self.create_move(_queen, i, self.add_file(_queen.file, k), _queen.rank + k, _chessBoard, MinimaxTurn)
-                            if (currentDepth < depthLimit):
-                                h = self.getMoves(thisMove, currentDepth+1, depthLimit, MinimaxTurn*-1)
-                            currentPossibleMoves.put(thisMove, h)
-                    if (self.fileToInt(_queen.file) + k < 8): # Right move
-                        if (self.valid_move(_queen, self.add_file(_queen.file, k), _queen.rank, _chessBoard)):
-                            thisMove, h = self.create_move(_queen, i, self.add_file(_queen.file, k), _queen.rank, _chessBoard, MinimaxTurn)
-                            if (currentDepth < depthLimit):
-                                h = self.getMoves(thisMove, currentDepth+1, depthLimit, MinimaxTurn*-1)
-                            currentPossibleMoves.put(thisMove, h)
-                    if (self.fileToInt(_queen.file) + k >= 0): # Left move
-                        if (self.valid_move(_queen, self.add_file(_queen.file, -k), _queen.rank, _chessBoard)):
-                            thisMove, h = self.create_move(_queen, i, self.add_file(_queen.file, -k), _queen.rank, _chessBoard, MinimaxTurn)
-                            if (currentDepth < depthLimit):
-                                h = self.getMoves(thisMove, currentDepth+1, depthLimit, MinimaxTurn*-1)
-                            currentPossibleMoves.put(thisMove, h)
-                    if (_queen.rank + k <= 8): # Upwards move
-                        if (self.valid_move(_queen, _queen.file, _queen.rank + k, _chessBoard)):
-                            thisMove, h = self.create_move(_queen, i, _queen.file, _queen.rank + k, _chessBoard, MinimaxTurn)
-                            if (currentDepth < depthLimit):
-                                h = self.getMoves(thisMove, currentDepth+1, depthLimit, MinimaxTurn*-1)
-                            currentPossibleMoves.put(thisMove, h)
-                    if (_queen.rank - k >= 0): # Downwards move
-                        if (self.valid_move(_queen, _queen.file, _queen.rank - k, _chessBoard)):
-                            thisMove, h = self.create_move(_queen, i, _queen.file, _queen.rank - k, _chessBoard, MinimaxTurn)
-                            if (currentDepth < depthLimit):
-                                h = self.getMoves(thisMove, currentDepth+1, depthLimit, MinimaxTurn*-1)
-                            currentPossibleMoves.put(thisMove, h)
-        for i in range(len(_chessBoard.king if MinimaxTurn > 0 else _chessBoard.enemyKing)): # Check KING moves
-            _king = _chessBoard.king[i] if MinimaxTurn > 0 else _chessBoard.enemyKing[i]
-            if (not _king.actual_piece.captured): # If not captured
-                if (self.fileToInt(_king.file) + 1 < 8 and _king.rank - 1 >= 0): # Bottom Right move
-                    if (self.valid_move(_king, self.add_file(_king.file, 1), _king.rank - 1, _chessBoard)):
-                        thisMove, h = self.create_move(_king, 0, self.add_file(_king.file, 1), _king.rank - 1, _chessBoard, MinimaxTurn)
-                        if (currentDepth < depthLimit):
-                            h = self.getMoves(thisMove, currentDepth+1, depthLimit, MinimaxTurn*-1)
+                        if (MinimaxTurn > 0): # Max turn
+                            if (h > beta): # PRUNE, Fail High
+                                item, weight = currentPossibleMoves.pop_back()
+                                return weight
+                            elif (h > alpha):
+                                alpha = h
+                            else:
+                                pass # Fail Low
+                        elif (MinimaxTurn < 0): # Min turn
+                            if (h < alpha): # PRUNE, Fail Low
+                                item, weight = currentPossibleMoves.pop()
+                                return weight
+                            elif (h < beta):
+                                beta = h
+                            else:
+                                pass # Fail High
+                    if (not _piece.file == "h" and self.valid_move(_piece, self.add_file(_piece.file, 1), _piece.rank + 1 * myMoveDirection, _chessBoard, MinimaxTurn)):
+                        thisMove, h = self.create_move(_piece, i, self.add_file(_piece.file, 1), _piece.rank + 1 * myMoveDirection, _chessBoard, -MinimaxTurn)
+                        if (currentDepth < maxDepth):
+                            h = self.getMoves(thisMove, currentDepth + 1, maxDepth, -MinimaxTurn, alpha, beta, startTime)
                         currentPossibleMoves.put(thisMove, h)
-                if (self.fileToInt(_king.file) - 1 >= 0 and _king.rank - 1 >= 0): # Bottom Left move
-                    if (self.valid_move(_king, self.add_file(_king.file, -1), _king.rank - 1, _chessBoard)):
-                        thisMove, h = self.create_move(_king, 0, self.add_file(_king.file, -1), _king.rank - 1, _chessBoard, MinimaxTurn)
-                        if (currentDepth < depthLimit):
-                            h = self.getMoves(thisMove, currentDepth+1, depthLimit, MinimaxTurn*-1)
+                        if (MinimaxTurn > 0): # Max turn
+                            if (h > beta): # PRUNE, Fail High
+                                item, weight = currentPossibleMoves.pop_back()
+                                return weight
+                            elif (h > alpha):
+                                alpha = h
+                            else:
+                                pass # Fail Low
+                        elif (MinimaxTurn < 0): # Min turn
+                            if (h < alpha): # PRUNE, Fail Low
+                                item, weight = currentPossibleMoves.pop()
+                                return weight
+                            elif (h < beta):
+                                beta = h
+                            else:
+                                pass # Fail High
+                    if (not _piece.file == "a" and self.valid_move(_piece, self.add_file(_piece.file, -1), _piece.rank + 1 * myMoveDirection, _chessBoard, MinimaxTurn)):
+                        thisMove, h = self.create_move(_piece, i, self.add_file(_piece.file, -1), _piece.rank + 1 * myMoveDirection, _chessBoard, -MinimaxTurn)
+                        if (currentDepth < maxDepth):
+                            h = self.getMoves(thisMove, currentDepth + 1, maxDepth, -MinimaxTurn, alpha, beta, startTime)
                         currentPossibleMoves.put(thisMove, h)
-                if (self.fileToInt(_king.file) - 1 >= 0 and _king.rank + 1 <= 8): # Top Left move
-                    if (self.valid_move(_king, self.add_file(_king.file, -1), _king.rank + 1, _chessBoard)):
-                        thisMove, h = self.create_move(_king, 0, self.add_file(_king.file, -1), _king.rank + 1, _chessBoard, MinimaxTurn)
-                        if (currentDepth < depthLimit):
-                            h = self.getMoves(thisMove, currentDepth+1, depthLimit, MinimaxTurn*-1)
-                        currentPossibleMoves.put(thisMove, h)
-                if (self.fileToInt(_king.file) + 1 < 8 and _king.rank + 1 <= 8): # Top Right move
-                    if (self.valid_move(_king, self.add_file(_king.file, 1), _king.rank + 1, _chessBoard)):
-                        thisMove, h = self.create_move(_king, 0, self.add_file(_king.file, 1), _king.rank + 1, _chessBoard, MinimaxTurn)
-                        if (currentDepth < depthLimit):
-                            h = self.getMoves(thisMove, currentDepth+1, depthLimit, MinimaxTurn*-1)
-                        currentPossibleMoves.put(thisMove, h)
-                if (self.fileToInt(_king.file) + 1 < 8): # Right move
-                    if (self.valid_move(_king, self.add_file(_king.file, 1), _king.rank, _chessBoard)):
-                        thisMove, h = self.create_move(_king, 0, self.add_file(_king.file, 1), _king.rank, _chessBoard, MinimaxTurn)
-                        if (currentDepth < depthLimit):
-                            h = self.getMoves(thisMove, currentDepth+1, depthLimit, MinimaxTurn*-1)
-                        currentPossibleMoves.put(thisMove, h)
-                if (self.fileToInt(_king.file) - 1 >= 0): # Left move
-                    if (self.valid_move(_king, self.add_file(_king.file, -1), _king.rank, _chessBoard)):
-                        thisMove, h = self.create_move(_king, 0, self.add_file(_king.file, -1), _king.rank, _chessBoard, MinimaxTurn)
-                        if (currentDepth < depthLimit):
-                            h = self.getMoves(thisMove, currentDepth+1, depthLimit, MinimaxTurn*-1)
-                        currentPossibleMoves.put(thisMove, h)
-                if (_king.rank + 1 <= 8): # Upwards move
-                    if (self.valid_move(_king, _king.file, _king.rank + 1, _chessBoard)):
-                        thisMove, h = self.create_move(_king, 0, _king.file, _king.rank + 1, _chessBoard, MinimaxTurn)
-                        if (currentDepth < depthLimit):
-                            h = self.getMoves(thisMove, currentDepth+1, depthLimit, MinimaxTurn*-1)
-                        currentPossibleMoves.put(thisMove, h)
-                if (_king.rank - 1 >= 0): # Downwards move
-                    if (self.valid_move(_king, _king.file, _king.rank - 1, _chessBoard)):
-                        thisMove, h = self.create_move(_king, 0, _king.file, _king.rank - 1, _chessBoard, MinimaxTurn)
-                        if (currentDepth < depthLimit):
-                            h = self.getMoves(thisMove, currentDepth+1, depthLimit, MinimaxTurn*-1)
-                        currentPossibleMoves.put(thisMove, h)
-                # CASTLING
-                if (not _king.actual_piece.has_moved):
-                    for k in range(0, len(_chessBoard.rook)):
-                        if (not _chessBoard.rook[k].actual_piece.has_moved and not _chessBoard.rook[k].actual_piece.captured):
-                            if (self.fileToInt(_chessBoard.rook[k].file) > self.fileToInt(_king.file)):
-                                if (self.valid_move(_king, self.add_file(_king.file, 2), _king.rank, _chessBoard)):
-                                    thisMove, h = self.create_move(_king, 0, self.add_file(_king.file, 2), _king.rank, _chessBoard, MinimaxTurn)
-                                    if (currentDepth < depthLimit):
-                                        h = self.getMoves(thisMove, currentDepth+1, depthLimit, MinimaxTurn*-1)
-                                    currentPossibleMoves.put(thisMove, h)
-                            elif (self.fileToInt(_chessBoard.rook[k].file) < self.fileToInt(_king.file)):
-                                if (self.valid_move(_king, self.add_file(_king.file, -2), _king.rank, _chessBoard)):
-                                    thisMove, h = self.create_move(_king, 0, self.add_file(_king.file, -2), _king.rank, _chessBoard, MinimaxTurn)
-                                    if (currentDepth < depthLimit):
-                                        h = self.getMoves(thisMove, currentDepth+1, depthLimit, MinimaxTurn*-1)
-                                    currentPossibleMoves.put(thisMove, h)
+                        if (MinimaxTurn > 0): # Max turn
+                            if (h > beta): # PRUNE, Fail High
+                                item, weight = currentPossibleMoves.pop_back()
+                                return weight
+                            elif (h > alpha):
+                                alpha = h
+                            else:
+                                pass # Fail Low
+                        elif (MinimaxTurn < 0): # Min turn
+                            if (h < alpha): # PRUNE, Fail Low
+                                item, weight = currentPossibleMoves.pop()
+                                return weight
+                            elif (h < beta):
+                                beta = h
+                            else:
+                                pass # Fail High
+                if (_piece.type == "Knight"):
+                    fileDirection = 1
+                    fileAmount = 1
+                    rankDirection = 1
+                    rankAmount = 2
+                    for k in range(8):
+                        if (self.fileToInt(_piece.file) + fileAmount * fileDirection < 8 and self.fileToInt(_piece.file) + fileAmount * fileDirection >= 0 and _piece.rank + rankAmount * rankDirection < 8 and _piece.rank + rankAmount * rankDirection >= 0):
+                            if (self.valid_move(_piece, self.add_file(_piece.file, fileAmount * fileDirection), _piece.rank + rankAmount * rankDirection, _chessBoard, MinimaxTurn)):
+                                thisMove, h = self.create_move(_piece, i, self.add_file(_piece.file, fileAmount * fileDirection), _piece.rank + rankAmount * rankDirection, _chessBoard, -MinimaxTurn)
+                                if (currentDepth < maxDepth):
+                                    h = self.getMoves(thisMove, currentDepth + 1, maxDepth, -MinimaxTurn, alpha, beta, startTime)
+                                currentPossibleMoves.put(thisMove, h)
+                                if (MinimaxTurn > 0): # Max turn
+                                    if (h > beta): # PRUNE, Fail High
+                                        item, weight = currentPossibleMoves.pop_back()
+                                        return weight
+                                    elif (h > alpha):
+                                        alpha = h
+                                    else:
+                                        pass # Fail Low
+                                elif (MinimaxTurn < 0): # Min turn
+                                    if (h < alpha): # PRUNE, Fail Low
+                                        item, weight = currentPossibleMoves.pop()
+                                        return weight
+                                    elif (h < beta):
+                                        beta = h
+                                    else:
+                                        pass # Fail High
+                        fileDirection *= -1
+                        if (k % 2 == 1):
+                            rankDirection *= -1
+                        if (k == 3):
+                            temp = fileAmount
+                            fileAmount = rankAmount
+                            rankAmount = temp
+                if (_piece.type == "Bishop" or _piece.type == "Queen" or _piece.type == "King"):
+                    for k in range(1, 8):
+                        fileDirection = 1
+                        rankDirection = 1
+                        # fileDirection | rankDirection |
+                        #       1 | 1 | Top Right
+                        #      -1 | 1 | Top Left
+                        #       1 | -1 | Bottom Right
+                        #      -1 | -1 | Bottom Left
+                        for t in range(4):
+                            if (self.fileToInt(_piece.file) + k * fileDirection < 8 and self.fileToInt(_piece.file) + k * fileDirection >= 0 and _piece.rank + k * rankDirection < 8 and _piece.rank + k * rankDirection >= 0):
+                                if (k == 1 or (k > 1 and not _piece.type == "King")):
+                                    if (self.valid_move(_piece, self.add_file(_piece.file, k * fileDirection), _piece.rank + k * rankDirection, _chessBoard, MinimaxTurn)):
+                                        thisMove, h = self.create_move(_piece, i, self.add_file(_piece.file, k * fileDirection), _piece.rank + k * rankDirection, _chessBoard, -MinimaxTurn)
+                                        if (currentDepth < maxDepth):
+                                            h = self.getMoves(thisMove, currentDepth + 1, maxDepth, -MinimaxTurn, alpha, beta, startTime)
+                                        currentPossibleMoves.put(thisMove, h)
+                                        if (MinimaxTurn > 0): # Max turn
+                                            if (h > beta): # PRUNE, Fail High
+                                                item, weight = currentPossibleMoves.pop_back()
+                                                return weight
+                                            elif (h > alpha):
+                                                alpha = h
+                                            else:
+                                                pass # Fail Low
+                                        elif (MinimaxTurn < 0): # Min turn
+                                            if (h < alpha): # PRUNE, Fail Low
+                                                item, weight = currentPossibleMoves.pop()
+                                                return weight
+                                            elif (h < beta):
+                                                beta = h
+                                            else:
+                                                pass # Fail High
+                            fileDirection *= -1
+                            if (t == 1):
+                                rankDirection *= -1
+                if (_piece.type == "Rook" or _piece.type == "Queen" or _piece.type == "King"):
+                    for k in range(1, 8):
+                        fileDirection = 1
+                        rankDirection = 0
+                        # fileDirection | rankDirection |
+                        #       1       |       0       | Right
+                        #      -1       |       0       | Left
+                        #       0       |       1       | Top
+                        #       0       |      -1       | Bottom
+                        for t in range(4):
+                            if (self.fileToInt(_piece.file) + k * fileDirection < 8 and self.fileToInt(_piece.file) + k * fileDirection >= 0 and _piece.rank + k * rankDirection < 8 and _piece.rank + k * rankDirection >= 0):
+                                if (k == 1 or (k > 1 and not _piece.type == "King")):
+                                    if (self.valid_move(_piece, self.add_file(_piece.file, k * fileDirection), _piece.rank + k * rankDirection, _chessBoard, MinimaxTurn)):
+                                        thisMove, h = self.create_move(_piece, i, self.add_file(_piece.file, k * fileDirection), _piece.rank + k * rankDirection, _chessBoard, -MinimaxTurn)
+                                        if (currentDepth < maxDepth):
+                                            h = self.getMoves(thisMove, currentDepth + 1, maxDepth, -MinimaxTurn, alpha, beta, startTime)
+                                        currentPossibleMoves.put(thisMove, h)
+                                        if (MinimaxTurn > 0): # Max turn
+                                            if (h > beta): # PRUNE, Fail High
+                                                item, weight = currentPossibleMoves.pop_back()
+                                                return weight
+                                            elif (h > alpha):
+                                                alpha = h
+                                            else:
+                                                pass # Fail Low
+                                        elif (MinimaxTurn < 0): # Min turn
+                                            if (h < alpha): # PRUNE, Fail Low
+                                                item, weight = currentPossibleMoves.pop()
+                                                return weight
+                                            elif (h < beta):
+                                                beta = h
+                                            else:
+                                                pass # Fail High
+                            fileDirection *= -1
+                            rankDirection *= -1
+                            if (t == 1):
+                                temp = rankDirection
+                                rankDirection = fileDirection
+                                fileDirection = temp
+
         if (currentDepth > 1):
             if (MinimaxTurn > 0): # MAX's turn
-                item, weight = currentPossibleMoves.pop_back()
-                return weight
+                if (currentPossibleMoves.qsize() > 0):
+                    item, weight = currentPossibleMoves.pop_back()
+                    return weight
+                else: # Stalemate or Checkmate
+                    return -100000
             elif (MinimaxTurn < 0): # MIN's turn
-                item, weight = currentPossibleMoves.pop()
-                return weight
+                if (currentPossibleMoves.qsize() > 0):
+                    item, weight = currentPossibleMoves.pop()
+                    return weight
+                else: # Stalemate or Checkmate
+                    return 100000
         else:
             return currentPossibleMoves
 
@@ -806,20 +812,21 @@ class AI(BaseAI):
         numPieces = len(self.game.pieces)
         self.makeLastMove()
         for i in range(numPieces):
-            curPiece = self.game.pieces[i]
-            if (curPiece.owner.id == self.player.id): # If piece belongs to me
+            curPiece = chessPiece(self.game.pieces[i])
+            if (curPiece.actual_piece.owner.id == self.player.id): # If piece belongs to me
                 if (curPiece.type == "Pawn"):
-                    self.chessBoard[-1].pawn.append(chessPiece(curPiece))
+                    self.chessBoard[-1].pawn.append(curPiece)
                 elif (curPiece.type == "Bishop"):
-                    self.chessBoard[-1].bishop.append(chessPiece(curPiece))
+                    self.chessBoard[-1].bishop.append(curPiece)
                 elif (curPiece.type == "Rook"):
-                    self.chessBoard[-1].rook.append(chessPiece(curPiece))
+                    self.chessBoard[-1].rook.append(curPiece)
                 elif (curPiece.type == "Knight"):
-                    self.chessBoard[-1].knight.append(chessPiece(curPiece))
+                    self.chessBoard[-1].knight.append(curPiece)
                 elif (curPiece.type == "Queen"):
-                    self.chessBoard[-1].queen.append(chessPiece(curPiece))
+                    self.chessBoard[-1].queen.append(curPiece)
                 elif (curPiece.type == "King"):
-                    self.chessBoard[-1].king.append(chessPiece(curPiece))
+                    self.chessBoard[-1].king.append(curPiece)
+                self.chessBoard[-1].myPieces.append(curPiece)
             else: # If piece doesn't belong to me
                 if (curPiece.type == "Pawn"):
                     self.chessBoard[-1].enemyPawn.append(chessPiece(curPiece))
@@ -833,7 +840,9 @@ class AI(BaseAI):
                     self.chessBoard[-1].enemyQueen.append(chessPiece(curPiece))
                 elif (curPiece.type == "King"):
                     self.chessBoard[-1].enemyKing.append(chessPiece(curPiece))
-        self.color = self.player.rank_direction
+                self.chessBoard[-1].enemyPieces.append(curPiece)
+            
+            self.color = self.player.rank_direction
 
     def game_updated(self):
         """ This is called every time the game's state updates, so if you are
@@ -845,9 +854,9 @@ class AI(BaseAI):
             prevMove = self.game.moves[-1]
             if (prevMove.piece.owner.id == self.player.id):
                 if (not prevMove.piece.type == "Knight"):
-                    self.chessBoard[-1].board.location[self.fileToInt(prevMove.to_file)][prevMove.to_rank-1] = prevMove.piece.type[0]
+                    self.chessBoard[-1].board.location[self.fileToInt(prevMove.to_file)][prevMove.to_rank - 1] = prevMove.piece.type[0]
                 else:
-                    self.chessBoard[-1].board.location[self.fileToInt(prevMove.to_file)][prevMove.to_rank-1] = "N"
+                    self.chessBoard[-1].board.location[self.fileToInt(prevMove.to_file)][prevMove.to_rank - 1] = "N"
 
                 if (prevMove.piece.type == "Pawn"):
                     for i in range(len(self.chessBoard[-1].pawn)):
@@ -887,11 +896,12 @@ class AI(BaseAI):
                             if (curPiece.owner.id == self.player.id and curPiece.type == "Rook"):
                                 self.chessBoard[-1].rook.append(chessPiece(curPiece))
                                 break
+                self.chessBoard[-1].myPieces = self.chessBoard[-1].pawn + self.chessBoard[-1].rook + self.chessBoard[-1].bishop + self.chessBoard[-1].knight + self.chessBoard[-1].queen + self.chessBoard[-1].king
             else:
                 if (not prevMove.piece.type == "Knight"):
-                    self.chessBoard[-1].board.location[self.fileToInt(prevMove.to_file)][prevMove.to_rank-1] = prevMove.piece.type[0].lower()
+                    self.chessBoard[-1].board.location[self.fileToInt(prevMove.to_file)][prevMove.to_rank - 1] = prevMove.piece.type[0].lower()
                 else:
-                    self.chessBoard[-1].board.location[self.fileToInt(prevMove.to_file)][prevMove.to_rank-1] = "n"
+                    self.chessBoard[-1].board.location[self.fileToInt(prevMove.to_file)][prevMove.to_rank - 1] = "n"
                 if (prevMove.piece.type == "Pawn"):
                     for i in range(len(self.chessBoard[-1].enemyPawn)):
                         if (prevMove.piece.id == self.chessBoard[-1].enemyPawn[i].id):
@@ -930,7 +940,8 @@ class AI(BaseAI):
                             if (not curPiece.owner.id == self.player.id and curPiece.type == "Rook"):
                                 self.chessBoard[-1].enemyRook.append(chessPiece(curPiece))
                                 break
-            self.chessBoard[-1].board.location[self.fileToInt(prevMove.from_file)][prevMove.from_rank-1] = ""
+                self.chessBoard[-1].enemyPieces = self.chessBoard[-1].enemyPawn + self.chessBoard[-1].enemyRook + self.chessBoard[-1].enemyBishop + self.chessBoard[-1].enemyKnight + self.chessBoard[-1].enemyQueen + self.chessBoard[-1].enemyKing
+            self.chessBoard[-1].board.location[self.fileToInt(prevMove.from_file)][prevMove.from_rank - 1] = ""
 
             capturedPiece = False
 
@@ -992,21 +1003,41 @@ class AI(BaseAI):
         self.print_current_board()
 
         currentPossibleMoves = pQueue()
-        currentPossibleMoves = self.getMoves(self.chessBoard[-1], 1, 2, 1) # Look at all moves based on Minimax
-                                            #   Current Board, Starting Depth (0 = Min Player, 1 = Max (Me)), Depth Limit, 1=Max Players Turn
+
+        startTime = time.time()
+        timeRemaining = self.player.time_remaining / math.pow(10, 9)
+        print("Time Remaining:", timeRemaining, "seconds")
+        numMovesLeft = (self.AVERAGE_MOVES * 4) - len(self.game.moves)
+        maxTime = timeRemaining / numMovesLeft
+        timeTaken = 0
+        maxDepth = 1
+
+        while (timeTaken < maxTime):
+            print("Depth:", maxDepth)
+            print("-------------------------------------------------------------")
+            currentPossibleMoves = self.getMoves(self.chessBoard[-1], 1, maxDepth, 1, -float("inf"), float("inf"), startTime) # Look at all moves based on Minimax
+                                            #   Current Board, Starting Depth,
+                                            #   Max Depth, 1=Max Players Turn,
+                                            #   alpha, beta, Start Time
+            maxTime = timeRemaining / numMovesLeft
+            timeTaken = time.time() - startTime
+            maxDepth += 1
+
         if (self.player.in_check):
             print("In Check...")
 
         bestMove, bestPriority = currentPossibleMoves.pop_back() # Get the best possible move using Minimax
-        while (self.find_check_piece(bestMove)):
-            bestMove, bestPriority = currentPossibleMoves.pop_back()
+
+        #while (self.find_check_piece(bestMove, 1)):
+        #    bestMove, bestPriority = currentPossibleMoves.pop_back()
 
         promotion = self.getPromotionType(bestMove)
         _move = bestMove.currentMove.actionObj.actual_piece.move(bestMove.currentMove.newFile, bestMove.currentMove.newRank, promotion)
         
         bestMove.currentMove.actionObj.move(bestMove.currentMove.newFile, bestMove.currentMove.newRank)
 
-        self.chessBoard.append(bestMove)
+        #bestMove.flip()
+        #self.chessBoard.append(bestMove)
         
         print("Moving", bestMove.currentMove.actionObj.type, "#" + str(bestMove.currentMove.actionObj.id), "to '" + str(bestMove.currentMove.newFile) + str(bestMove.currentMove.newRank) + "', with priority", bestPriority)
 
@@ -1035,7 +1066,7 @@ class AI(BaseAI):
         print("  +------------------------+")
         # iterate through the range in reverse order
         for f in range(7, -1, -1):
-            print(f+1, "|", end="")
+            print(f + 1, "|", end="")
             for r in range(8):
                 if (not self.chessBoard[-1].board.location[r][f] == ""):
                     print("", self.chessBoard[-1].board.location[r][f], end=" ")

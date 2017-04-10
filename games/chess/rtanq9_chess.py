@@ -44,12 +44,9 @@ class MAP:
         return False
 
 ######
-# state: Stores one a possible state in the Tree
-# - Requires a Location Map, a Radiation Map, an array of Boats
-# - an array of Alligators, an array of Turtles, and an array of Trees
-# - with optional parameters of Path-Cost, and Parent State
+# move: stores a given move on a chessboard
 class move:
-    def __init__(self, ActObj = None, ActObjNum = 0, newF = 0, newR = 0, heuristicV = 0, parent = None):
+    def __init__(self, ActObj, ActObjNum = 0, newF = 0, newR = 0, heuristicV = 0, parent = None):
         #self.pathCost = deepcopy(pState.pathCost)
         self.actionObj = ActObj
         self.actionObjNum = ActObjNum
@@ -58,6 +55,8 @@ class move:
         self.weight = heuristicV
         self.parent = parent
         self.children = []
+        if (ActObj == None):
+            raise NameError("ActObj is None")
     #################################
     # __eq__: allows a state to be using in a comparison operator
     def __eq__(self, otherState):
@@ -102,7 +101,6 @@ class pQueue:
                 break
 
         if (not putOn and startRange < stopRange):
-            print("RANDOM!")
             self.queue.insert(random.randrange(startRange, stopRange), pQueueObject(item, weight))
         elif (not putOn):
             self.queue.insert(startRange, pQueueObject(item, weight))
@@ -140,13 +138,14 @@ class chessPiece:
         self.id = actual.id
         self.type = actual.type
         self.captured = actual.captured
+        self.has_moved = actual.has_moved
         self.actual_piece = actual
     def move(self, newF, newR, promo = ""):
         self.file = newF
         self.rank = newR
 
 class chessBoard:
-    def __init__(self, pMove = None, cMove = None, flip = False):        
+    def __init__(self, pMove, cMove, flip = False):        
         if (pMove == None):
             self.pawn = []
             self.rook = []
@@ -162,6 +161,8 @@ class chessBoard:
             self.enemyKing = []
             self.numMoves = 0
             self.board = MAP(8, 8)
+            self.myPieces = []
+            self.enemyPieces = []
         elif (not flip):
             self.pawn = deepCopy(pMove.pawn)
             self.rook = deepCopy(pMove.rook)
@@ -177,6 +178,8 @@ class chessBoard:
             self.enemyKing = deepCopy(pMove.enemyKing)
             self.numMoves = pMove.numMoves + 1
             self.board = deepcopy(pMove.board)
+            self.myPieces = self.pawn + self.rook + self.bishop + self.knight + self.queen + self.king
+            self.enemyPieces = self.enemyPawn + self.enemyRook + self.enemyBishop + self.enemyKnight + self.enemyQueen + self.enemyKing
         elif (flip):
             self.pawn = deepCopy(pMove.enemyPawn)
             self.rook = deepCopy(pMove.enemyRook)
@@ -192,10 +195,15 @@ class chessBoard:
             self.enemyKing = deepCopy(pMove.king)
             self.numMoves = pMove.numMoves + 1
             self.board = deepcopy(pMove.board)
+            self.myPieces = self.pawn + self.rook + self.bishop + self.knight + self.queen + self.king
+            self.enemyPieces = self.enemyPawn + self.enemyRook + self.enemyBishop + self.enemyKnight + self.enemyQueen + self.enemyKing
 
         self.children = []
         self.parent = pMove
         self.currentMove = cMove
+    def flip(self):
+        self.myPieces = self.enemyPawn + self.enemyRook + self.enemyBishop + self.enemyKnight + self.enemyQueen + self.enemyKing
+        self.enemyPieces = self.pawn + self.rook + self.bishop + self.knight + self.queen + self.king
 
 def deepCopy(oldList):
     newList = []
