@@ -458,13 +458,13 @@ class AI(BaseAI):
             myPoints += 100
         elif (capturedPiece == bishop or capturedPiece == knight):
             enemyPoints -= 300
-            myPoints += 300
+            myPoints += 3000
         elif (capturedPiece == rook):
             enemyPoints -= 500
-            myPoints += 500
+            myPoints += 5000
         elif (capturedPiece == queen):
             enemyPoints -= 900
-            myPoints += 900
+            myPoints += 9000
 
         if (oldLocation.y < 7 and oldLocation.y > 0 and newBoard.board.location[oldLocation.x][oldLocation.y - myMoveDirection] == myQueen):
             myPoints -= 1200
@@ -484,23 +484,24 @@ class AI(BaseAI):
 
         #if (self.numMoves < 12):
         if (actionObj.type == "Pawn"):
-            myPoints += random.randrange(50, 100)
+            myPoints += random.randrange(200, 500)
             if (abs(oldLocation.x - newLocation.x) == 2):
                 myPoints += 200
-            if ((self.player.rank_direction == -1 and actionObj.rank == 2) or (self.player.rank_direction == 1 and actionObj.rank == 7)):
-                myPoints += 1000
+            if ((myMoveDirection < 0 and actionObj.rank == 2) or (myMoveDirection > 0 and actionObj.rank == 7)):
+                myPoints += 10000
         elif (actionObj.type == "King" and capturedPiece == ""):
-            myPoints -= 1500
+            myPoints -= 5000
         elif (actionObj.type == "King" and not capturedPiece == ""):
-            myPoints -= 300
+            myPoints -= 900
         elif (actionObj.type == "Queen"):
-            myPoints += 50
+            myPoints -= 300
 
-        if (actionObj.type == "Rook" or actionObj.type == "Queen"):
-            if (newLocation.y + 1 == newBoard.enemyKing[0].rank or self.intToFile(newLocation.x) == newBoard.enemyKing[0].file):
+        if ((actionObj.type == "Rook" or actionObj.type == "Queen") and newLocation.y < 6 and newLocation.y > 1 and newLocation.x < 6 and newLocation.x > 1):
+            if (newLocation.y + 2 == newBoard.enemyKing[0].rank or newLocation.y - 2 == newBoard.enemyKing[0].rank or 
+                self.intToFile(newLocation.x + 2) == newBoard.enemyKing[0].file or self.intToFile(newLocation.x - 2) == newBoard.enemyKing[0].file):
                 myPoints += 800
         if (actionObj.type == "Bishop" or actionObj.type == "Queen"):
-            for i in range(1, 8):
+            for i in range(2, 8):
                 if (newLocation.x + i < 8 and newLocation.y + i < 8):
                     if ((newLocation.y + 1 + i == newBoard.enemyKing[0].rank) and (self.intToFile(newLocation.x + i) == newBoard.enemyKing[0].file)):
                         myPoints += 600 + 200 if actionObj.type == "Bishop" else 0
@@ -520,10 +521,9 @@ class AI(BaseAI):
 
 
         #if (MinimaxTurn > 0):
-        heuristicValue = myPoints - enemyPoints + random.randrange(10, 220)
+        heuristicValue = myPoints - enemyPoints# + random.randrange(10, 220)
         #else:
         #    heuristicValue = enemyPoints - myPoints
-        
         return newBoard, heuristicValue * MinimaxTurn
 
     def makeLastMove(self):
@@ -584,8 +584,9 @@ class AI(BaseAI):
             if (not _piece.captured):
                 if (_piece.type == "Pawn"):
                     if (not _piece.has_moved):
-                        if (self.valid_move(_piece, _piece.file, _piece.rank + 2 * myMoveDirection, _chessBoard, MinimaxTurn)):
-                            thisMove, h = self.create_move(_piece, i, _piece.file, _piece.rank + 2 * myMoveDirection, _chessBoard, -MinimaxTurn)
+                        if (_chessBoard.board.location[self.fileToInt(_piece.file)][_piece.rank + 2*myMoveDirection - 1] == "" and 
+                            self.valid_move(_piece, _piece.file, _piece.rank + 2 * myMoveDirection, _chessBoard, MinimaxTurn)):
+                            thisMove, h = self.create_move(_piece, i, _piece.file, _piece.rank + 2 * myMoveDirection, _chessBoard, MinimaxTurn)
                             if (currentDepth < maxDepth):
                                 h = self.getMoves(thisMove, currentDepth + 1, maxDepth, -MinimaxTurn, alpha, beta, startTime)
                             currentPossibleMoves.put(thisMove, h)
@@ -605,8 +606,9 @@ class AI(BaseAI):
                                     beta = h
                                 else:
                                     pass # Fail High
-                    if (self.valid_move(_piece, _piece.file, _piece.rank + 1 * myMoveDirection, _chessBoard, MinimaxTurn)):
-                        thisMove, h = self.create_move(_piece, i, _piece.file, _piece.rank + 1 * myMoveDirection, _chessBoard, -MinimaxTurn)
+                    if (_chessBoard.board.location[self.fileToInt(_piece.file)][_piece.rank + 1*myMoveDirection - 1] == "" and 
+                            self.valid_move(_piece, _piece.file, _piece.rank + 1 * myMoveDirection, _chessBoard, MinimaxTurn)):
+                        thisMove, h = self.create_move(_piece, i, _piece.file, _piece.rank + 1 * myMoveDirection, _chessBoard, MinimaxTurn)
                         if (currentDepth < maxDepth):
                             h = self.getMoves(thisMove, currentDepth + 1, maxDepth, -MinimaxTurn, alpha, beta, startTime)
                         currentPossibleMoves.put(thisMove, h)
@@ -626,8 +628,9 @@ class AI(BaseAI):
                                 beta = h
                             else:
                                 pass # Fail High
-                    if (not _piece.file == "h" and self.valid_move(_piece, self.add_file(_piece.file, 1), _piece.rank + 1 * myMoveDirection, _chessBoard, MinimaxTurn)):
-                        thisMove, h = self.create_move(_piece, i, self.add_file(_piece.file, 1), _piece.rank + 1 * myMoveDirection, _chessBoard, -MinimaxTurn)
+                    if (_chessBoard.board.location[self.fileToInt(self.add_file(_piece.file, 1))][_piece.rank + 1*myMoveDirection - 1] == "" and 
+                        not _piece.file == "h" and self.valid_move(_piece, self.add_file(_piece.file, 1), _piece.rank + 1 * myMoveDirection, _chessBoard, MinimaxTurn)):
+                        thisMove, h = self.create_move(_piece, i, self.add_file(_piece.file, 1), _piece.rank + 1 * myMoveDirection, _chessBoard, MinimaxTurn)
                         if (currentDepth < maxDepth):
                             h = self.getMoves(thisMove, currentDepth + 1, maxDepth, -MinimaxTurn, alpha, beta, startTime)
                         currentPossibleMoves.put(thisMove, h)
@@ -647,8 +650,9 @@ class AI(BaseAI):
                                 beta = h
                             else:
                                 pass # Fail High
-                    if (not _piece.file == "a" and self.valid_move(_piece, self.add_file(_piece.file, -1), _piece.rank + 1 * myMoveDirection, _chessBoard, MinimaxTurn)):
-                        thisMove, h = self.create_move(_piece, i, self.add_file(_piece.file, -1), _piece.rank + 1 * myMoveDirection, _chessBoard, -MinimaxTurn)
+                    if (_chessBoard.board.location[self.fileToInt(self.add_file(_piece.file, -1))][_piece.rank + 1*myMoveDirection - 1] == "" and 
+                        not _piece.file == "a" and self.valid_move(_piece, self.add_file(_piece.file, -1), _piece.rank + 1 * myMoveDirection, _chessBoard, MinimaxTurn)):
+                        thisMove, h = self.create_move(_piece, i, self.add_file(_piece.file, -1), _piece.rank + 1 * myMoveDirection, _chessBoard, MinimaxTurn)
                         if (currentDepth < maxDepth):
                             h = self.getMoves(thisMove, currentDepth + 1, maxDepth, -MinimaxTurn, alpha, beta, startTime)
                         currentPossibleMoves.put(thisMove, h)
@@ -676,7 +680,7 @@ class AI(BaseAI):
                     for k in range(8):
                         if (self.fileToInt(_piece.file) + fileAmount * fileDirection < 8 and self.fileToInt(_piece.file) + fileAmount * fileDirection >= 0 and _piece.rank + rankAmount * rankDirection < 8 and _piece.rank + rankAmount * rankDirection >= 0):
                             if (self.valid_move(_piece, self.add_file(_piece.file, fileAmount * fileDirection), _piece.rank + rankAmount * rankDirection, _chessBoard, MinimaxTurn)):
-                                thisMove, h = self.create_move(_piece, i, self.add_file(_piece.file, fileAmount * fileDirection), _piece.rank + rankAmount * rankDirection, _chessBoard, -MinimaxTurn)
+                                thisMove, h = self.create_move(_piece, i, self.add_file(_piece.file, fileAmount * fileDirection), _piece.rank + rankAmount * rankDirection, _chessBoard, MinimaxTurn)
                                 if (currentDepth < maxDepth):
                                     h = self.getMoves(thisMove, currentDepth + 1, maxDepth, -MinimaxTurn, alpha, beta, startTime)
                                 currentPossibleMoves.put(thisMove, h)
@@ -713,10 +717,12 @@ class AI(BaseAI):
                         #       1 | -1 | Bottom Right
                         #      -1 | -1 | Bottom Left
                         for t in range(4):
-                            if (self.fileToInt(_piece.file) + k * fileDirection < 8 and self.fileToInt(_piece.file) + k * fileDirection >= 0 and _piece.rank + k * rankDirection < 8 and _piece.rank + k * rankDirection >= 0):
+                            if (self.fileToInt(_piece.file) + k * fileDirection < 8 and self.fileToInt(_piece.file) + k * fileDirection >= 0 and 
+                                _piece.rank + k * rankDirection < 8 and _piece.rank + k * rankDirection >= 0 and 
+                                _chessBoard.board.location[self.fileToInt(self.add_file(_piece.file, k * fileDirection))][_piece.rank + k * rankDirection - 1] == ""):
                                 if (k == 1 or (k > 1 and not _piece.type == "King")):
                                     if (self.valid_move(_piece, self.add_file(_piece.file, k * fileDirection), _piece.rank + k * rankDirection, _chessBoard, MinimaxTurn)):
-                                        thisMove, h = self.create_move(_piece, i, self.add_file(_piece.file, k * fileDirection), _piece.rank + k * rankDirection, _chessBoard, -MinimaxTurn)
+                                        thisMove, h = self.create_move(_piece, i, self.add_file(_piece.file, k * fileDirection), _piece.rank + k * rankDirection, _chessBoard, MinimaxTurn)
                                         if (currentDepth < maxDepth):
                                             h = self.getMoves(thisMove, currentDepth + 1, maxDepth, -MinimaxTurn, alpha, beta, startTime)
                                         currentPossibleMoves.put(thisMove, h)
@@ -749,10 +755,12 @@ class AI(BaseAI):
                         #       0       |       1       | Top
                         #       0       |      -1       | Bottom
                         for t in range(4):
-                            if (self.fileToInt(_piece.file) + k * fileDirection < 8 and self.fileToInt(_piece.file) + k * fileDirection >= 0 and _piece.rank + k * rankDirection < 8 and _piece.rank + k * rankDirection >= 0):
+                            if (self.fileToInt(_piece.file) + k * fileDirection < 8 and self.fileToInt(_piece.file) + k * fileDirection >= 0 and 
+                                _piece.rank + k * rankDirection < 8 and _piece.rank + k * rankDirection >= 0 and 
+                                _chessBoard.board.location[self.fileToInt(self.add_file(_piece.file, k * fileDirection))][_piece.rank + k * rankDirection - 1] == ""):
                                 if (k == 1 or (k > 1 and not _piece.type == "King")):
                                     if (self.valid_move(_piece, self.add_file(_piece.file, k * fileDirection), _piece.rank + k * rankDirection, _chessBoard, MinimaxTurn)):
-                                        thisMove, h = self.create_move(_piece, i, self.add_file(_piece.file, k * fileDirection), _piece.rank + k * rankDirection, _chessBoard, -MinimaxTurn)
+                                        thisMove, h = self.create_move(_piece, i, self.add_file(_piece.file, k * fileDirection), _piece.rank + k * rankDirection, _chessBoard, MinimaxTurn)
                                         if (currentDepth < maxDepth):
                                             h = self.getMoves(thisMove, currentDepth + 1, maxDepth, -MinimaxTurn, alpha, beta, startTime)
                                         currentPossibleMoves.put(thisMove, h)
